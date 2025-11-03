@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import image from "../assets/generated-image.png"
 
 
-
+// dweferferferf
 
 const Home = () => {
     const [isScrolled, setIsScrolled] = useState(false);
