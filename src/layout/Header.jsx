@@ -9,7 +9,7 @@ const Header = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [cartItemsCount, setCartItemsCount] = useState(1); // Example cart count
+  const [cartItemsCount, setCartItemsCount] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,6 +32,29 @@ const Header = () => {
     };
   }, []);
 
+  // Load cart items count from localStorage on component mount
+  useEffect(() => {
+    loadCartItemsCount();
+  }, []);
+
+  // Listen for storage changes (when cart is updated from other components)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      loadCartItemsCount();
+    };
+
+    // Listen for storage events (from other tabs/windows)
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Listen for custom cart update events (from same tab)
+    window.addEventListener('cartUpdated', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('cartUpdated', handleStorageChange);
+    };
+  }, []);
+
   // Close mobile menu when resizing to larger screens
   useEffect(() => {
     const handleResize = () => {
@@ -44,18 +67,34 @@ const Header = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Function to load cart items count from localStorage
+  const loadCartItemsCount = () => {
+    try {
+      const cart = JSON.parse(localStorage.getItem('cart')) || [];
+      const totalItems = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+      setCartItemsCount(totalItems);
+      console.log("🛒 Cart items count:", totalItems);
+    } catch (error) {
+      console.error("❌ Error loading cart count:", error);
+      setCartItemsCount(0);
+    }
+  };
+
+  // Function to manually refresh cart count (can be called from other components)
+  const refreshCartCount = () => {
+    loadCartItemsCount();
+  };
+
   const getHeaderStyles = () => {
     const active = (isScrolled || isHovered) && !isMenuOpen;
 
     return {
       backgroundColor: active ? "rgba(255, 255, 255, 0.98)" : "transparent",
       backdropFilter: active ? "blur(15px)" : "none",
-      // borderBottom: active ? "1px solid rgba(0, 0, 0, 0.08)" : "none",
       transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
       boxShadow: active ? "0 4px 20px rgba(0, 0, 0, 0.08)" : "none",
     };
   };
-
 
   const textColor = (isScrolled || isHovered) && !isMenuOpen ? "#E39963" : "#FFFFFF";
 
@@ -66,7 +105,6 @@ const Header = () => {
     { label: "About", href: "/about-us" },
     { label: "Contact", href: "/contact" },
     { label: "FAQs", href: "/faq" },
-    
   ];
 
   return (
@@ -235,7 +273,7 @@ const Header = () => {
 
               {/* Cart Items Count Badge */}
               {cartItemsCount > 0 && (
-                <div style={{
+              <div style={{
                   position: 'absolute',
                   top: '2px',
                   right: '2px',
@@ -244,14 +282,16 @@ const Header = () => {
                   borderRadius: '50%',
                   width: '16px',
                   height: '16px',
-                  fontSize: '10px',
+                  fontSize: '11px',
                   fontWeight: '600',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  lineHeight: 1
+                  lineHeight: 1,
+               
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}>
-                  {cartItemsCount}
+                  {cartItemsCount > 99 ? '99+' : cartItemsCount}
                 </div>
               )}
             </div>

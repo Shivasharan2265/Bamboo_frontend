@@ -9,7 +9,7 @@ const HeaderOne = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [cartItemsCount, setCartItemsCount] = useState(1); // Example cart count
+  const [cartItemsCount, setCartItemsCount] = useState(0); // Dynamic cart count
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,6 +32,29 @@ const HeaderOne = () => {
     };
   }, []);
 
+  // Load cart items count from localStorage on component mount
+  useEffect(() => {
+    loadCartItemsCount();
+  }, []);
+
+  // Listen for storage changes (when cart is updated from other components)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      loadCartItemsCount();
+    };
+
+    // Listen for storage events (from other tabs/windows)
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Listen for custom cart update events (from same tab)
+    window.addEventListener('cartUpdated', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('cartUpdated', handleStorageChange);
+    };
+  }, []);
+
   // Close mobile menu when resizing to larger screens
   useEffect(() => {
     const handleResize = () => {
@@ -44,48 +67,57 @@ const HeaderOne = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Function to load cart items count from localStorage
+  const loadCartItemsCount = () => {
+    try {
+      const cart = JSON.parse(localStorage.getItem('cart')) || [];
+      const totalItems = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+      setCartItemsCount(totalItems);
+      console.log("🛒 HeaderOne - Cart items count:", totalItems);
+    } catch (error) {
+      console.error("❌ Error loading cart count in HeaderOne:", error);
+      setCartItemsCount(0);
+    }
+  };
+
 const getHeaderStyles = () => {
   const active = (isScrolled || isHovered) && !isMenuOpen;
 
   return {
     backgroundColor: active ? "rgba(255, 255, 255, 0.98)" : "transparent",
     backdropFilter: active ? "blur(15px)" : "none",
-    // borderBottom: active ? "1px solid rgba(0, 0, 0, 0.08)" : "none",
     transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
     boxShadow: active ? "0 4px 20px rgba(0, 0, 0, 0.08)" : "0 4px 20px rgba(0, 0, 0, 0.08)",
   };
 };
 
-
   const textColor = (isScrolled || isHovered) && !isMenuOpen ? "#E39963" : "#E39963";
 
-    const menuItems = [
+  const menuItems = [
     { label: "Home", href: "#" },
     { label: "Categories", href: "/categories" },
     { label: "Products", href: "/products" },
-
     { label: "About", href: "/about-us" },
     { label: "Contact", href: "/contact" },
     { label: "FAQs", href: "/faq" },
-    
   ];
 
   return (
     <>
-   <header
-  className={isMobile && isMenuOpen ? "header-hidden" : ""}
-  style={{
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "clamp(60px, 8vw, 80px)",
-    zIndex: 1000,
-    ...getHeaderStyles(),
-  }}
-  onMouseEnter={() => !isMenuOpen && setIsHovered(true)}
-  onMouseLeave={() => !isMenuOpen && setIsHovered(false)}
->
+      <header
+        className={isMobile && isMenuOpen ? "header-hidden" : ""}
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "clamp(60px, 8vw, 80px)",
+          zIndex: 1000,
+          ...getHeaderStyles(),
+        }}
+        onMouseEnter={() => !isMenuOpen && setIsHovered(true)}
+        onMouseLeave={() => !isMenuOpen && setIsHovered(false)}
+      >
         <div
           style={{
             display: "flex",
@@ -109,7 +141,7 @@ const getHeaderStyles = () => {
 
           {/* Centered Logo */}
           <div
-          onClick={() => navigate("/")}
+            onClick={() => navigate("/")}
             style={{
               position: isMobile ? "static" : "absolute",
               left: isMobile ? "auto" : "50%",
@@ -120,6 +152,7 @@ const getHeaderStyles = () => {
               gap: "clamp(8px, 1.5vw, 12px)",
               marginLeft: isMobile ? "auto" : "0",
               marginRight: isMobile ? "auto" : "0",
+              cursor: "pointer"
             }}
           >
             <img
@@ -200,7 +233,7 @@ const getHeaderStyles = () => {
 
             {/* Cart Icon */}
             <div
-            onClick={()=> navigate("/cart")}
+              onClick={() => navigate("/cart")}
               style={{
                 cursor: "pointer",
                 color: textColor,
@@ -246,14 +279,16 @@ const getHeaderStyles = () => {
                   borderRadius: '50%',
                   width: '16px',
                   height: '16px',
-                  fontSize: '10px',
+                  fontSize: '11px',
                   fontWeight: '600',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  lineHeight: 1
+                  lineHeight: 1,
+               
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}>
-                  {cartItemsCount}
+                  {cartItemsCount > 99 ? '99+' : cartItemsCount}
                 </div>
               )}
             </div>

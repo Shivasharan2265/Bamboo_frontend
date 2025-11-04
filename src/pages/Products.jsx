@@ -16,6 +16,7 @@ const Products = () => {
     const [loading, setLoading] = useState(true);
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [addingToCart, setAddingToCart] = useState({});
+    const [cartItems, setCartItems] = useState([]);
 
     const [filters, setFilters] = useState({
         category: 'all',
@@ -27,6 +28,23 @@ const Products = () => {
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [isMobile, setIsMobile] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
+
+    // Load cart items from localStorage on component mount
+    useEffect(() => {
+        loadCartFromLocalStorage();
+    }, []);
+
+    // Load cart items from localStorage
+    const loadCartFromLocalStorage = () => {
+        try {
+            const savedCart = JSON.parse(localStorage.getItem('cart')) || [];
+            console.log("📥 Loaded cart from localStorage:", savedCart);
+            setCartItems(savedCart);
+        } catch (error) {
+            console.error("❌ Error loading cart from localStorage:", error);
+            setCartItems([]);
+        }
+    };
 
     // Check if mobile on mount and resize
     useEffect(() => {
@@ -159,75 +177,104 @@ const Products = () => {
     };
 
     // Add to Cart Function
-const addToCart = async (product, e) => {
-    e.stopPropagation();
+    // Add to Cart Function - Direct to localStorage only
+    const addToCart = (product, e) => {
+        e.stopPropagation();
 
-    try {
-        setAddingToCart(prev => ({ ...prev, [product._id]: true }));
+        try {
+            setAddingToCart(prev => ({ ...prev, [product._id]: true }));
 
-        const cartItem = {
-            productId: product._id,
-            title: product.title?.en || 'Product',
-            price: product.prices?.price || 0,
-            image: product.image && product.image.length > 0 ? product.image[0] : chair,
-            quantity: 1,
-            description: product.description?.en || 'Product description'
-        };
+            const cartItem = {
+                productId: product._id,
+                title: product.title?.en || 'Product',
+                price: product.prices?.price || 0,
+                image: product.image && product.image.length > 0 ? product.image[0] : chair,
+                quantity: 1,
+                description: product.description?.en || 'Product description',
+                // Additional fields for better display in cart
+                name: product.title?.en || 'Product',
+                category: product.category || 'general'
+            };
 
-        console.log("🛒 Adding to cart:", cartItem);
+            console.log("🛒 Adding to cart:", cartItem);
 
-        // Get token from localStorage
-        const token = localStorage.getItem('authToken');
-        
-        // Check if user is authenticated
-        if (!token) {
-            alert('Please login to add items to cart');
-            navigate('/login');
-            return;
-        }
+            // Save directly to localStorage
+            saveToLocalStorage(cartItem);
+            alert('Product added to cart successfully!');
 
-        const response = await axios.post('http://localhost:5055/api/order/add', cartItem, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        console.log("✅ Add to cart response:", response.data);
-        alert('Product added to cart successfully!');
-
-    } catch (error) {
-        console.error("❌ Add to cart error:", error);
-        
-        // More detailed error handling
-        if (error.response) {
-            // Server responded with error status
-            console.log("Error response data:", error.response.data);
-            console.log("Error status:", error.response.status);
-            
-            if (error.response.status === 401) {
-                alert('Your session has expired. Please login again.');
-                localStorage.removeItem('authToken');
-                navigate('/login');
-            } else if (error.response.status === 500) {
-                alert('Server error. Please try again later.');
-            } else {
-                alert(`Error: ${error.response.data.message || 'Failed to add to cart'}`);
-            }
-        } else if (error.request) {
-            // Request was made but no response received
-            console.log("No response received:", error.request);
-            alert('Network error. Please check your connection.');
-        } else {
-            // Something else happened
-            console.log("Error message:", error.message);
+        } catch (error) {
+            console.error("❌ Add to cart error:", error);
             alert('Failed to add product to cart. Please try again.');
+        } finally {
+            setAddingToCart(prev => ({ ...prev, [product._id]: false }));
         }
-    } finally {
-        setAddingToCart(prev => ({ ...prev, [product._id]: false }));
-    }
-};
+    };
 
+    // Helper function to save to localStorage
+    // Helper function to save to localStorage
+    const saveToLocalStorage = (cartItem) => {
+        try {
+            // Get existing cart from localStorage
+            const existingCart = JSON.parse(localStorage.getItem('cart')) || [];
+
+            // Check if product already exists in cart
+            const existingItemIndex = existingCart.findIndex(item => item.productId === cartItem.productId);
+
+            if (existingItemIndex > -1) {
+                // Update quantity if item exists
+                existingCart[existingItemIndex].quantity += 1;
+            } else {
+                // Add new item to cart
+                existingCart.push(cartItem);
+            }
+
+            // Save updated cart back to localStorage
+            localStorage.setItem('cart', JSON.stringify(existingCart));
+            console.log("💾 Saved to localStorage:", existingCart);
+
+            // Update state
+            setCartItems(existingCart);
+
+        } catch (error) {
+            console.error("❌ Error saving to localStorage:", error);
+            throw error;
+        }
+    };
+
+    // Remove from Cart Function
+    const removeFromCart = (productId, e) => {
+        e.stopPropagation();
+
+        try {
+            setAddingToCart(prev => ({ ...prev, [productId]: true }));
+
+            // Get existing cart from localStorage
+            const existingCart = JSON.parse(localStorage.getItem('cart')) || [];
+
+            // Remove the item
+            const updatedCart = existingCart.filter(item => item.productId !== productId);
+
+            // Save updated cart back to localStorage
+            localStorage.setItem('cart', JSON.stringify(updatedCart));
+            console.log("🗑️ Removed from cart:", productId);
+
+            // Update state
+            setCartItems(updatedCart);
+
+            alert('Product removed from cart!');
+
+        } catch (error) {
+            console.error("❌ Remove from cart error:", error);
+            alert('Failed to remove product from cart. Please try again.');
+        } finally {
+            setAddingToCart(prev => ({ ...prev, [productId]: false }));
+        }
+    };
+
+    // Check if product is in cart
+    const isProductInCart = (productId) => {
+        return cartItems.some(item => item.productId === productId);
+    };
     // Filter products based on selected filters (price, material, featured)
     // This now only handles client-side filters, not category
     useEffect(() => {
@@ -951,7 +998,7 @@ const addToCart = async (product, e) => {
                         }}>
                             {filteredProducts.map((product, index) => (
                                 <div key={product._id}
-                                    onClick={() => navigate(`/product/${product._id}`)}
+                                    // onClick={() => navigate(`/product/${product._id}`)}
                                     style={{
                                         position: 'relative',
                                         cursor: 'pointer',
@@ -1048,21 +1095,21 @@ const addToCart = async (product, e) => {
                                         }}>
                                             {product.title?.en || 'Product Name'}
                                         </h3>
-                                       <p style={{
-    fontSize: isMobile ? '0.85rem' : '0.9rem',
-    color: '#434242',
-    margin: '0 0 12px 0',
-    opacity: 0.7,
-    lineHeight: '1.4',
-    display: '-webkit-box',
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: 'vertical',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    minHeight: isMobile ? 'auto' : '40px'
-}}>
-    {product.description?.en || 'Product description'}
-</p>
+                                        <p style={{
+                                            fontSize: isMobile ? '0.85rem' : '0.9rem',
+                                            color: '#434242',
+                                            margin: '0 0 12px 0',
+                                            opacity: 0.7,
+                                            lineHeight: '1.4',
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            minHeight: isMobile ? 'auto' : '40px'
+                                        }}>
+                                            {product.description?.en || 'Product description'}
+                                        </p>
 
                                         <div style={{
                                             fontSize: isMobile ? '1rem' : '1rem',
@@ -1073,52 +1120,105 @@ const addToCart = async (product, e) => {
                                         }}>
                                             ${product.prices?.price || '0'}
                                         </div>
-                                        <button
-                                            onClick={(e) => addToCart(product, e)}
-                                            disabled={addingToCart[product._id]}
-                                            style={{
-                                                padding: isMobile ? '12px 20px' : '12px 30px',
-                                                backgroundColor: addingToCart[product._id] ? '#cccccc' : 'transparent',
-                                                border: '1px solid #434242',
-                                                color: addingToCart[product._id] ? '#666' : '#434242',
-                                                fontSize: isMobile ? '11px' : '12px',
-                                                fontWeight: '400',
-                                                letterSpacing: '1px',
-                                                cursor: addingToCart[product._id] ? 'not-allowed' : 'pointer',
-                                                transition: 'all 0.3s ease',
-                                                textTransform: 'uppercase',
-                                                width: isMobile ? '100%' : '100%',
-                                                borderRadius: isMobile ? '5px' : '0',
-                                                opacity: addingToCart[product._id] ? 0.7 : 1
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (!addingToCart[product._id] && !isMobile) {
-                                                    e.target.style.backgroundColor = '#434242';
-                                                    e.target.style.color = '#FFFFFF';
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (!addingToCart[product._id] && !isMobile) {
-                                                    e.target.style.backgroundColor = 'transparent';
-                                                    e.target.style.color = '#434242';
-                                                }
-                                            }}>
-                                            {addingToCart[product._id] ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                                    <div style={{
-                                                        width: '14px',
-                                                        height: '14px',
-                                                        border: '2px solid transparent',
-                                                        borderTop: '2px solid currentColor',
-                                                        borderRadius: '50%',
-                                                        animation: 'spin 1s linear infinite'
-                                                    }}></div>
-                                                    Adding...
-                                                </div>
-                                            ) : (
-                                                'Add to Cart'
-                                            )}
-                                        </button>
+                                        {isProductInCart(product._id) ? (
+                                            // Remove from Cart Button
+                                            <button
+                                                onClick={(e) => removeFromCart(product._id, e)}
+                                                disabled={addingToCart[product._id]}
+                                                style={{
+                                                    padding: isMobile ? '12px 20px' : '12px 30px',
+                                                    backgroundColor: addingToCart[product._id] ? '#cccccc' : '#E39963',
+                                                    border: '1px solid #E39963',
+                                                    color: '#FFFFFF',
+                                                    fontSize: isMobile ? '11px' : '12px',
+                                                    fontWeight: '400',
+                                                    letterSpacing: '1px',
+                                                    cursor: addingToCart[product._id] ? 'not-allowed' : 'pointer',
+                                                    transition: 'all 0.3s ease',
+                                                    textTransform: 'uppercase',
+                                                    width: isMobile ? '100%' : '100%',
+                                                    borderRadius: isMobile ? '5px' : '0',
+                                                    opacity: addingToCart[product._id] ? 0.7 : 1
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (!addingToCart[product._id] && !isMobile) {
+                                                        e.target.style.backgroundColor = '#d18a55';
+                                                        e.target.style.borderColor = '#d18a55';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!addingToCart[product._id] && !isMobile) {
+                                                        e.target.style.backgroundColor = '#E39963';
+                                                        e.target.style.borderColor = '#E39963';
+                                                    }
+                                                }}
+                                            >
+                                                {addingToCart[product._id] ? (
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                                        <div style={{
+                                                            width: '14px',
+                                                            height: '14px',
+                                                            border: '2px solid transparent',
+                                                            borderTop: '2px solid currentColor',
+                                                            borderRadius: '50%',
+                                                            animation: 'spin 1s linear infinite'
+                                                        }}></div>
+                                                        Removing...
+                                                    </div>
+                                                ) : (
+                                                    'Remove from Cart'
+                                                )}
+                                            </button>
+                                        ) : (
+                                            // Add to Cart Button
+                                            <button
+                                                onClick={(e) => addToCart(product, e)}
+                                                disabled={addingToCart[product._id]}
+                                                style={{
+                                                    padding: isMobile ? '12px 20px' : '12px 30px',
+                                                    backgroundColor: addingToCart[product._id] ? '#cccccc' : 'transparent',
+                                                    border: '1px solid #434242',
+                                                    color: addingToCart[product._id] ? '#666' : '#434242',
+                                                    fontSize: isMobile ? '11px' : '12px',
+                                                    fontWeight: '400',
+                                                    letterSpacing: '1px',
+                                                    cursor: addingToCart[product._id] ? 'not-allowed' : 'pointer',
+                                                    transition: 'all 0.3s ease',
+                                                    textTransform: 'uppercase',
+                                                    width: isMobile ? '100%' : '100%',
+                                                    borderRadius: isMobile ? '5px' : '0',
+                                                    opacity: addingToCart[product._id] ? 0.7 : 1
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (!addingToCart[product._id] && !isMobile) {
+                                                        e.target.style.backgroundColor = '#434242';
+                                                        e.target.style.color = '#FFFFFF';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!addingToCart[product._id] && !isMobile) {
+                                                        e.target.style.backgroundColor = 'transparent';
+                                                        e.target.style.color = '#434242';
+                                                    }
+                                                }}
+                                            >
+                                                {addingToCart[product._id] ? (
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                                        <div style={{
+                                                            width: '14px',
+                                                            height: '14px',
+                                                            border: '2px solid transparent',
+                                                            borderTop: '2px solid currentColor',
+                                                            borderRadius: '50%',
+                                                            animation: 'spin 1s linear infinite'
+                                                        }}></div>
+                                                        Adding...
+                                                    </div>
+                                                ) : (
+                                                    'Add to Cart'
+                                                )}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}

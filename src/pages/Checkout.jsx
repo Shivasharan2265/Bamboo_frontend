@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HeaderOne from '../layout/Header copy';
 import chair from "../assets/bamboo_chair.jpg";
-import table from "../assets/bamboo_table.jpg";
-import thread from "../assets/bamboo_thead.jpg";
-import axios from 'axios';
 
 const Checkout = () => {
     const navigate = useNavigate();
@@ -12,30 +9,7 @@ const Checkout = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [orderComplete, setOrderComplete] = useState(false);
     const [orderNumber, setOrderNumber] = useState('');
-
-    const [cartItems] = useState([
-        {
-            id: 1,
-            name: 'Bamboo Lounge Chair',
-            price: 299,
-            image: chair,
-            quantity: 1,
-        },
-        {
-            id: 2,
-            name: 'Bamboo Dining Table',
-            price: 599,
-            image: table,
-            quantity: 1,
-        },
-        {
-            id: 3,
-            name: 'Bamboo Thread Set',
-            price: 89,
-            image: thread,
-            quantity: 2,
-        }
-    ]);
+    const [cartItems, setCartItems] = useState([]);
 
     const [formData, setFormData] = useState({
         email: '',
@@ -51,42 +25,164 @@ const Checkout = () => {
         nameOnCard: '',
     });
 
-
-  
     useEffect(() => {
         const checkMobile = () => {
             setIsMobile(window.innerWidth <= 768);
         };
         checkMobile();
         window.addEventListener('resize', checkMobile);
+
+        // Load cart items from localStorage
+        loadCartFromLocalStorage();
+
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
+
+    // Load cart items from localStorage
+    const loadCartFromLocalStorage = () => {
+        try {
+            const savedCart = JSON.parse(localStorage.getItem('cart')) || [];
+            console.log("📥 Checkout - Loaded from localStorage:", savedCart);
+            setCartItems(savedCart);
+        } catch (error) {
+            console.error("❌ Checkout - Error loading cart from localStorage:", error);
+            setCartItems([]);
+        }
+    };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const getSubtotal = () => cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-    const getShipping = () => getSubtotal() > 500 ? 0 : 49;
-    const getTax = () => getSubtotal() * 0.08;
-    const getTotal = () => getSubtotal() + getShipping() + getTax();
+    // Helper function to get image source
+    const getImageSrc = (item) => {
+        if (item.image && item.image !== chair) {
+            return item.image;
+        }
+        return chair; // fallback image
+    };
+
+    const getSubtotal = () => {
+        return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+    };
+
+    const getShipping = () => {
+        return getSubtotal() > 500 ? 0 : 49;
+    };
+
+    const getTax = () => {
+        return getSubtotal() * 0.08; // 8% tax
+    };
+
+    const getTotal = () => {
+        return getSubtotal() + getShipping() + getTax();
+    };
 
     const generateOrderNumber = () => 'BMB' + Date.now().toString().slice(-8);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Check if cart is empty
+        if (cartItems.length === 0) {
+            alert('Your cart is empty. Please add items to your cart before proceeding to checkout.');
+            navigate('/products');
+            return;
+        }
+
         setIsProcessing(true);
 
+        // Simulate payment processing
         setTimeout(() => {
-            setOrderNumber(generateOrderNumber());
+            const newOrderNumber = generateOrderNumber();
+            setOrderNumber(newOrderNumber);
             setIsProcessing(false);
             setOrderComplete(true);
+            
+            // Clear cart after successful order
+            localStorage.removeItem('cart');
+            setCartItems([]);
+            
             window.scrollTo(0, 0);
         }, 2000);
     };
 
     const continueShopping = () => navigate('/products');
+
+    // If cart is empty and not in order complete state, redirect to products
+    if (cartItems.length === 0 && !orderComplete) {
+        return (
+            <div style={{
+                width: '100%',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+                marginTop: isMobile ? '70px' : '100px',
+                minHeight: '100vh',
+                overflowX: 'hidden'
+            }}>
+                <HeaderOne />
+
+                <div style={{
+                    maxWidth: '600px',
+                    margin: '0 auto',
+                    padding: isMobile ? '80px 20px' : '100px 50px',
+                    textAlign: 'center'
+                }}>
+                    <div style={{
+                        fontSize: isMobile ? '80px' : '120px',
+                        color: '#F8F8F8',
+                        marginBottom: isMobile ? '20px' : '30px'
+                    }}>
+                        🛒
+                    </div>
+                    
+                    <h1 style={{
+                        fontSize: isMobile ? '1.8rem' : '2.5rem',
+                        fontWeight: '400',
+                        color: '#434242',
+                        marginBottom: isMobile ? '15px' : '20px',
+                        lineHeight: '1.3'
+                    }}>
+                        Your Cart is Empty
+                    </h1>
+                    
+                    <p style={{
+                        fontSize: isMobile ? '16px' : '18px',
+                        color: '#666',
+                        lineHeight: '1.6',
+                        marginBottom: isMobile ? '30px' : '40px',
+                        maxWidth: '500px',
+                        margin: '0 auto',
+                        padding: isMobile ? '0 10px' : '0'
+                    }}>
+                        Add some products to your cart before proceeding to checkout.
+                    </p>
+                    
+                    <button
+                        onClick={continueShopping}
+                        style={{
+                            padding: isMobile ? '14px 30px' : '16px 45px',
+                            backgroundColor: '#7DBA00',
+                            border: 'none',
+                            color: '#FFFFFF',
+                            fontSize: isMobile ? '15px' : '16px',
+                            fontWeight: '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px',
+                            borderRadius: '8px',
+                            marginBottom: '20px',
+                            width: isMobile ? '100%' : 'auto',
+                            maxWidth: isMobile ? '280px' : 'none'
+                        }}
+                    >
+                        Start Shopping
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     if (orderComplete) {
         return (
@@ -164,18 +260,6 @@ const Checkout = () => {
                             margin: '0 auto',
                             display: 'block'
                         }}
-                        onMouseEnter={(e) => {
-                            if (!isMobile) {
-                                e.target.style.backgroundColor = '#6aa800';
-                                e.target.style.transform = 'translateY(-2px)';
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (!isMobile) {
-                                e.target.style.backgroundColor = '#7DBA00';
-                                e.target.style.transform = 'translateY(0)';
-                            }
-                        }}
                     >
                         Continue Shopping
                     </button>
@@ -214,7 +298,7 @@ const Checkout = () => {
                         padding: isMobile ? '0 5px' : '0',
                         wordWrap: 'break-word'
                     }}>
-                        Checkout
+                        Checkout ({cartItems.length} items)
                     </h1>
                 </div>
 
@@ -699,7 +783,7 @@ const Checkout = () => {
 
                             <div style={{ marginBottom: isMobile ? '15px' : '25px' }}>
                                 {cartItems.map((item, index) => (
-                                    <div key={item.id} style={{
+                                    <div key={item.productId} style={{
                                         display: 'flex',
                                         gap: isMobile ? '10px' : '15px',
                                         padding: isMobile ? '10px 0' : '15px 0',
@@ -715,8 +799,8 @@ const Checkout = () => {
                                             border: '2px solid rgba(125, 186, 0, 0.2)'
                                         }}>
                                             <img
-                                                src={item.image}
-                                                alt={item.name}
+                                                src={getImageSrc(item)}
+                                                alt={item.name || item.title}
                                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             />
                                         </div>
@@ -728,7 +812,7 @@ const Checkout = () => {
                                                 margin: '0 0 4px 0',
                                                 wordWrap: 'break-word'
                                             }}>
-                                                {item.name}
+                                                {item.name || item.title}
                                             </h4>
                                             <div style={{
                                                 display: 'flex',
@@ -825,18 +909,6 @@ const Checkout = () => {
                                     borderRadius: '6px',
                                     marginBottom: isMobile ? '10px' : '15px',
                                     transition: 'all 0.3s ease'
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!isMobile && !isProcessing) {
-                                        e.target.style.backgroundColor = '#6aa800';
-                                        e.target.style.transform = 'translateY(-2px)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!isMobile && !isProcessing) {
-                                        e.target.style.backgroundColor = '#7DBA00';
-                                        e.target.style.transform = 'translateY(0)';
-                                    }
                                 }}
                             >
                                 {isProcessing ? 'Processing...' : `Pay $${getTotal().toFixed(2)}`}

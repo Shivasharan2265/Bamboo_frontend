@@ -2,42 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HeaderOne from '../layout/Header copy';
 import chair from "../assets/bamboo_chair.jpg";
-import table from "../assets/bamboo_table.jpg";
-import thread from "../assets/bamboo_thead.jpg";
-import spoon from "../assets/bamboo_spoon.jpeg";
 
 const Cart = () => {
     const navigate = useNavigate();
     const [isMobile, setIsMobile] = useState(false);
-    const [cartItems, setCartItems] = useState([
-        {
-            id: 1,
-            name: 'Bamboo Lounge Chair',
-            price: 299,
-            image: chair,
-            description: 'Elegant seating with natural curves',
-            quantity: 1,
-            category: 'chairs'
-        },
-        {
-            id: 2,
-            name: 'Bamboo Dining Table',
-            price: 599,
-            image: table,
-            description: 'Modern table for family gatherings',
-            quantity: 1,
-            category: 'tables'
-        },
-        {
-            id: 3,
-            name: 'Bamboo Thread Set',
-            price: 89,
-            image: thread,
-            description: 'Handcrafted decorative threads',
-            quantity: 2,
-            category: 'accessories'
-        }
-    ]);
+    const [cartItems, setCartItems] = useState([]);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -47,20 +16,64 @@ const Cart = () => {
         checkMobile();
         window.addEventListener('resize', checkMobile);
 
+        // Load cart items from localStorage
+        loadCartFromLocalStorage();
+
         return () => {
             window.removeEventListener('resize', checkMobile);
         };
     }, []);
 
-    const updateQuantity = (id, newQuantity) => {
-        if (newQuantity < 1) return;
+    // Load cart items from localStorage
+    const loadCartFromLocalStorage = () => {
+        try {
+            const savedCart = JSON.parse(localStorage.getItem('cart')) || [];
+            console.log("📥 Loaded from localStorage:", savedCart);
+            setCartItems(savedCart);
+        } catch (error) {
+            console.error("❌ Error loading cart from localStorage:", error);
+            setCartItems([]);
+        }
+    };
+
+    // Save cart items to localStorage whenever cartItems changes
+    useEffect(() => {
+        if (cartItems.length > 0) {
+            try {
+                localStorage.setItem('cart', JSON.stringify(cartItems));
+                console.log("💾 Cart saved to localStorage:", cartItems);
+            } catch (error) {
+                console.error("❌ Error saving cart to localStorage:", error);
+            }
+        }
+    }, [cartItems]);
+
+    const updateQuantity = (productId, newQuantity) => {
+        if (newQuantity < 1) {
+            removeItem(productId);
+            return;
+        }
+        
         setCartItems(cartItems.map(item => 
-            item.id === id ? { ...item, quantity: newQuantity } : item
+            item.productId === productId ? { ...item, quantity: newQuantity } : item
         ));
     };
 
-    const removeItem = (id) => {
-        setCartItems(cartItems.filter(item => item.id !== id));
+    const removeItem = (productId) => {
+        const updatedCart = cartItems.filter(item => item.productId !== productId);
+        setCartItems(updatedCart);
+        
+        // Update localStorage after removal
+        if (updatedCart.length === 0) {
+            localStorage.removeItem('cart');
+        } else {
+            localStorage.setItem('cart', JSON.stringify(updatedCart));
+        }
+    };
+
+    const clearCart = () => {
+        setCartItems([]);
+        localStorage.removeItem('cart');
     };
 
     const getSubtotal = () => {
@@ -81,11 +94,19 @@ const Cart = () => {
 
     const proceedToCheckout = () => {
         // Here you would typically integrate with a payment processor
-       navigate("/checkout")
+        navigate("/checkout");
     };
 
     const continueShopping = () => {
         navigate('/products');
+    };
+
+    // Helper function to get image source
+    const getImageSrc = (item) => {
+        if (item.image && item.image !== chair) {
+            return item.image;
+        }
+        return chair; // fallback image
     };
 
     if (cartItems.length === 0) {
@@ -167,12 +188,6 @@ const Cart = () => {
                                 e.target.style.transform = 'translateY(0)';
                             }
                         }}
-                        onTouchStart={(e) => {
-                            e.target.style.backgroundColor = '#6aa800';
-                        }}
-                        onTouchEnd={(e) => {
-                            e.target.style.backgroundColor = '#7DBA00';
-                        }}
                     >
                         Start Shopping
                     </button>
@@ -212,12 +227,6 @@ const Cart = () => {
                     <span
                         style={{ cursor: 'pointer', color: '#57C7C2' }}
                         onClick={() => navigate('/')}
-                        onMouseEnter={(e) => {
-                            e.target.style.color = '#7DBA00';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.color = '#57C7C2';
-                        }}
                     >
                         Home
                     </span>
@@ -225,12 +234,6 @@ const Cart = () => {
                     <span
                         style={{ cursor: 'pointer', color: '#57C7C2' }}
                         onClick={() => navigate('/products')}
-                        onMouseEnter={(e) => {
-                            e.target.style.color = '#7DBA00';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.color = '#57C7C2';
-                        }}
                     >
                         Products
                     </span>
@@ -250,16 +253,45 @@ const Cart = () => {
                 margin: '0 auto',
                 padding: isMobile ? '0 15px 40px' : '0 50px 80px',
             }}>
-                <h1 style={{
-                    fontSize: isMobile ? '1.8rem' : '2.5rem',
-                    fontWeight: '400',
-                    color: '#434242',
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                     marginBottom: isMobile ? '25px' : '40px',
-                    textAlign: isMobile ? 'center' : 'left',
-                    padding: isMobile ? '0 10px' : '0'
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '15px' : '0'
                 }}>
-                    Shopping Cart
-                </h1>
+                    <h1 style={{
+                        fontSize: isMobile ? '1.8rem' : '2.5rem',
+                        fontWeight: '400',
+                        color: '#434242',
+                        margin: 0,
+                        textAlign: isMobile ? 'center' : 'left'
+                    }}>
+                        Shopping Cart ({cartItems.length} items)
+                    </h1>
+                    
+                    {cartItems.length > 0 && (
+                        <button
+                            onClick={clearCart}
+                            style={{
+                                padding: isMobile ? '10px 20px' : '8px 16px',
+                                backgroundColor: 'transparent',
+                                border: '1px solid #E37DCC',
+                                color: '#E37DCC',
+                                fontSize: isMobile ? '14px' : '13px',
+                                fontWeight: '400',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px',
+                                borderRadius: '6px'
+                            }}
+                        >
+                            Clear Cart
+                        </button>
+                    )}
+                </div>
 
                 <div style={{
                     display: 'grid',
@@ -309,26 +341,6 @@ const Cart = () => {
                                         borderRadius: '6px',
                                         width: isMobile ? '100%' : 'auto'
                                     }}
-                                    onMouseEnter={(e) => {
-                                        if (!isMobile) {
-                                            e.target.style.backgroundColor = '#57C7C2';
-                                            e.target.style.color = '#FFFFFF';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isMobile) {
-                                            e.target.style.backgroundColor = 'transparent';
-                                            e.target.style.color = '#57C7C2';
-                                        }
-                                    }}
-                                    onTouchStart={(e) => {
-                                        e.target.style.backgroundColor = '#57C7C2';
-                                        e.target.style.color = '#FFFFFF';
-                                    }}
-                                    onTouchEnd={(e) => {
-                                        e.target.style.backgroundColor = 'transparent';
-                                        e.target.style.color = '#57C7C2';
-                                    }}
                                 >
                                     Continue Shopping
                                 </button>
@@ -340,7 +352,7 @@ const Cart = () => {
                                 gap: isMobile ? '15px' : '20px'
                             }}>
                                 {cartItems.map((item, index) => (
-                                    <div key={item.id} style={{
+                                    <div key={item.productId} style={{
                                         display: 'flex',
                                         gap: isMobile ? '15px' : '20px',
                                         padding: isMobile ? '15px' : '20px',
@@ -350,18 +362,6 @@ const Cart = () => {
                                         transition: 'all 0.3s ease',
                                         position: 'relative',
                                         flexDirection: isMobile ? 'column' : 'row'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isMobile) {
-                                            e.currentTarget.style.boxShadow = '0 5px 20px rgba(227, 125, 204, 0.1)';
-                                            e.currentTarget.style.transform = 'translateY(-2px)';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isMobile) {
-                                            e.currentTarget.style.boxShadow = 'none';
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                        }
                                     }}>
                                         {/* Product Image and Details Row */}
                                         <div style={{
@@ -378,8 +378,8 @@ const Cart = () => {
                                                 flexShrink: 0
                                             }}>
                                                 <img
-                                                    src={item.image}
-                                                    alt={item.name}
+                                                    src={getImageSrc(item)}
+                                                    alt={item.name || item.title}
                                                     style={{
                                                         width: '100%',
                                                         height: '100%',
@@ -402,7 +402,7 @@ const Cart = () => {
                                                     margin: 0,
                                                     lineHeight: '1.3'
                                                 }}>
-                                                    {item.name}
+                                                    {item.name || item.title}
                                                 </h3>
                                                 <p style={{
                                                     fontSize: isMobile ? '13px' : '14px',
@@ -446,7 +446,7 @@ const Cart = () => {
                                                     padding: isMobile ? '4px' : '5px'
                                                 }}>
                                                     <button
-                                                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                                         style={{
                                                             width: isMobile ? '28px' : '32px',
                                                             height: isMobile ? '28px' : '32px',
@@ -460,26 +460,6 @@ const Cart = () => {
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (!isMobile) {
-                                                                e.target.style.backgroundColor = '#57C7C2';
-                                                                e.target.style.color = '#FFFFFF';
-                                                            }
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            if (!isMobile) {
-                                                                e.target.style.backgroundColor = '#F8F8F8';
-                                                                e.target.style.color = '#57C7C2';
-                                                            }
-                                                        }}
-                                                        onTouchStart={(e) => {
-                                                            e.target.style.backgroundColor = '#57C7C2';
-                                                            e.target.style.color = '#FFFFFF';
-                                                        }}
-                                                        onTouchEnd={(e) => {
-                                                            e.target.style.backgroundColor = '#F8F8F8';
-                                                            e.target.style.color = '#57C7C2';
                                                         }}
                                                     >
                                                         -
@@ -494,7 +474,7 @@ const Cart = () => {
                                                         {item.quantity}
                                                     </span>
                                                     <button
-                                                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                                                         style={{
                                                             width: isMobile ? '28px' : '32px',
                                                             height: isMobile ? '28px' : '32px',
@@ -508,26 +488,6 @@ const Cart = () => {
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (!isMobile) {
-                                                                e.target.style.backgroundColor = '#57C7C2';
-                                                                e.target.style.color = '#FFFFFF';
-                                                            }
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            if (!isMobile) {
-                                                                e.target.style.backgroundColor = '#F8F8F8';
-                                                                e.target.style.color = '#57C7C2';
-                                                            }
-                                                        }}
-                                                        onTouchStart={(e) => {
-                                                            e.target.style.backgroundColor = '#57C7C2';
-                                                            e.target.style.color = '#FFFFFF';
-                                                        }}
-                                                        onTouchEnd={(e) => {
-                                                            e.target.style.backgroundColor = '#F8F8F8';
-                                                            e.target.style.color = '#57C7C2';
                                                         }}
                                                     >
                                                         +
@@ -545,7 +505,7 @@ const Cart = () => {
 
                                             {/* Remove Button */}
                                             <button
-                                                onClick={() => removeItem(item.id)}
+                                                onClick={() => removeItem(item.productId)}
                                                 style={{
                                                     padding: isMobile ? '8px 12px' : '6px 12px',
                                                     backgroundColor: 'transparent',
@@ -558,26 +518,6 @@ const Cart = () => {
                                                     textTransform: 'uppercase',
                                                     letterSpacing: '0.5px',
                                                     borderRadius: '6px'
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    if (!isMobile) {
-                                                        e.target.style.backgroundColor = '#E37DCC';
-                                                        e.target.style.color = '#FFFFFF';
-                                                    }
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    if (!isMobile) {
-                                                        e.target.style.backgroundColor = 'transparent';
-                                                        e.target.style.color = '#E37DCC';
-                                                    }
-                                                }}
-                                                onTouchStart={(e) => {
-                                                    e.target.style.backgroundColor = '#E37DCC';
-                                                    e.target.style.color = '#FFFFFF';
-                                                }}
-                                                onTouchEnd={(e) => {
-                                                    e.target.style.backgroundColor = 'transparent';
-                                                    e.target.style.color = '#E37DCC';
                                                 }}
                                             >
                                                 Remove
@@ -732,26 +672,6 @@ const Cart = () => {
                                 borderRadius: '8px',
                                 marginBottom: isMobile ? '12px' : '15px'
                             }}
-                            onMouseEnter={(e) => {
-                                if (!isMobile) {
-                                    e.target.style.backgroundColor = '#6aa800';
-                                    e.target.style.transform = 'translateY(-2px)';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!isMobile) {
-                                    e.target.style.backgroundColor = '#7DBA00';
-                                    e.target.style.transform = 'translateY(0)';
-                                }
-                            }}
-                            onTouchStart={(e) => {
-                                e.target.style.backgroundColor = '#6aa800';
-                                e.target.style.transform = 'translateY(-1px)';
-                            }}
-                            onTouchEnd={(e) => {
-                                e.target.style.backgroundColor = '#7DBA00';
-                                e.target.style.transform = 'translateY(0)';
-                            }}
                         >
                             Proceed to Checkout
                         </button>
@@ -760,32 +680,9 @@ const Cart = () => {
                             fontSize: isMobile ? '11px' : '12px',
                             color: '#666',
                             textAlign: 'center',
-                            lineHeight: '1.4',
-                            marginBottom: isMobile ? '15px' : '0'
+                            lineHeight: '1.4'
                         }}>
-                            🔒 Secure checkout powered by Stripe
-                        </div>
-
-                        {/* Trust Badges */}
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(3, 1fr)',
-                            gap: isMobile ? '8px' : '15px',
-                            marginTop: isMobile ? '15px' : '20px',
-                            paddingTop: isMobile ? '15px' : '20px',
-                            borderTop: '1px solid rgba(87, 199, 194, 0.2)'
-                        }}>
-                            {['🌱 Sustainable', '🚚 Free Shipping', '✅ 5-Year Warranty'].map((badge, index) => (
-                                <div key={index} style={{
-                                    fontSize: isMobile ? '10px' : '11px',
-                                    color: index === 0 ? '#7DBA00' : index === 1 ? '#57C7C2' : '#E37DCC',
-                                    fontWeight: '500',
-                                    textAlign: 'center',
-                                    lineHeight: '1.3'
-                                }}>
-                                    {badge}
-                                </div>
-                            ))}
+                            🔒 Secure checkout
                         </div>
                     </div>
                 </div>

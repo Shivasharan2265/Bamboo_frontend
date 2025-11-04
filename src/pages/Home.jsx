@@ -7,6 +7,8 @@ import table from "../assets/bamboo_table.jpg";
 import thread from "../assets/bamboo_thead.jpg";
 import spoon from "../assets/bamboo_spoon.jpeg";
 import Header from '../layout/Header';
+import HeaderOne from '../layout/Header copy';
+import stick from "../assets/bamboostick.png"
 import { useNavigate } from 'react-router-dom';
 import image from "../assets/generated-image.png"
 import axios from 'axios';
@@ -24,6 +26,7 @@ const Home = () => {
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    
 
     useEffect(() => {
         const handleScroll = () => {
@@ -58,58 +61,53 @@ const Home = () => {
         }
     };
 
-    const fetchCategories = async () => {
-        try {
-            const response = await axios.get("http://localhost:5055/api/category");
-            console.log("✅ Categories API Response:", response.data);
-
-            // Extract categories from the children array
-            if (response.data && response.data[0] && response.data[0].children) {
-                setCategories(response.data[0].children);
-            } else {
-                setCategories([]);
-            }
-
-        } catch (error) {
-            console.error("❌ Category API Error:", error);
+const fetchCategories = async () => {
+    try {
+        setLoading(true);
+        const response = await axios.get(`${process.env.API_URL}/category`);
+        if (response.data && response.data[0] && response.data[0].children) {
+            setCategories(response.data[0].children);
+        } else {
             setCategories([]);
         }
-    };
+    } catch (error) {
+        console.error("❌ Category API Error:", error);
+        setCategories([]);
+    } finally {
+        setLoading(false);
+    }
+};
 
-    const fetchProducts = async () => {
-        try {
-            const page = 1;
-            const limit = 8; // Limit to 8 featured products
-
-            const requestParams = { page, limit };
-
-            const response = await axios.get("http://localhost:5055/api/products", {
-                params: requestParams,
-            });
-
-            console.log("✅ Products API Response:", response.data);
-
-            if (response.data && response.data.products) {
-                setProducts(response.data.products);
-            } else {
-                setProducts([]);
-            }
-
-        } catch (error) {
-            console.error("❌ Products API Error:", error);
+const fetchProducts = async () => {
+    try {
+        setLoading(true);
+        const page = 1;
+        const limit = 8;
+         const response = await axios.get(`${process.env.API_URL}/products`, {
+            params: { page, limit },
+        });
+        if (response.data && response.data.products) {
+            setProducts(response.data.products);
+        } else {
             setProducts([]);
         }
+    } catch (error) {
+        console.error("❌ Products API Error:", error);
+        setProducts([]);
+    } finally {
+        setLoading(false);
+    }
+};
+
+useEffect(() => {
+    const fetchData = async () => {
+        setLoading(true);
+        await Promise.all([fetchCategories(), fetchProducts()]);
+        setLoading(false);
     };
+    fetchData();
+}, []);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            await Promise.all([fetchCategories(), fetchProducts()]);
-            setLoading(false);
-        };
-
-        fetchData();
-    }, []);
 
     // Helper function to get category name
     const getCategoryName = (category) => {
@@ -195,24 +193,92 @@ const getUltraHighQualityImage = (url) => {
 
 
   // Show full page loader while loading
-    if (loading) {
-        return (
-            <div style={{
-                width: '100%',
-                height: '100vh',
-                backgroundColor: '#121621',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                zIndex: 9999
-            }}>
-                <Loader />
-            </div>
-        );
-    }
+if (loading) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: '#fff',
+        position: 'relative',
+      }}
+    >
+      <HeaderOne />
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+        }}
+      >
+        {/* Stick image on left */}
+        {/* <img
+          src={stick}
+          alt="bamboo stick"
+          style={{
+            height: '70px',
+            width: 'auto',
+            objectFit: 'contain',
+            
+          }}
+        /> */}
+
+        {/* Colorful loader */}
+        <div className="loader"></div>
+      </div>
+
+      <style>
+        {`
+          .loader {
+            --c1: no-repeat linear-gradient(#E37DCC 0 0);
+            --c2: no-repeat linear-gradient(#7DBA00 0 0);
+            --c3: no-repeat linear-gradient(#57C7C2 0 0);
+            --c4: no-repeat linear-gradient(#FCD647 0 0);
+            --c5: no-repeat linear-gradient(#E39963 0 0);
+            background:
+              var(--c1), var(--c2), var(--c3),
+              var(--c4), var(--c5), var(--c1),
+              var(--c2), var(--c3), var(--c4);
+            background-size: 16px 16px;
+            animation:
+              l32-1 1s infinite,
+              l32-2 1s infinite;
+          }
+
+          @keyframes l32-1 {
+            0%, 100% { width: 45px; height: 45px; }
+            35%, 65% { width: 65px; height: 65px; }
+          }
+
+          @keyframes l32-2 {
+            0%, 40% {
+              background-position:
+                0 0, 0 50%, 0 100%,
+                50% 100%, 100% 100%,
+                100% 50%, 100% 0,
+                50% 0, 50% 50%;
+            }
+            60%, 100% {
+              background-position:
+                0 50%, 0 100%, 50% 100%,
+                100% 100%, 100% 50%,
+                100% 0, 50% 0,
+                0 0, 50% 50%;
+            }
+          }
+
+          /* Bamboo stick floating effect */
+        
+        `}
+      </style>
+    </div>
+  );
+}
+
+
 
     return (
         <div style={{
@@ -810,6 +876,39 @@ const getUltraHighQualityImage = (url) => {
                             No categories available
                         </div>
                     )}
+
+                         {/* View All Button */}
+                    <div style={{
+                        textAlign: 'center',
+                        marginTop: isMobile ? '40px' : '60px'
+                    }}>
+                        <button
+                            onClick={() => navigate("/categories")}
+                            style={{
+                                padding: isMobile ? '12px 30px' : '15px 40px',
+                                backgroundColor: 'transparent',
+                                border: '1px solid #57C7C2',
+                                color: '#57C7C2',
+                                fontSize: isMobile ? '13px' : '14px',
+                                fontWeight: '400',
+                                letterSpacing: '1px',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                                textTransform: 'uppercase'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.backgroundColor = '#57C7C2';
+                                e.target.style.color = '#FFFFFF';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.backgroundColor = 'transparent';
+                                e.target.style.color = '#57C7C2';
+                            }}>
+                            View All Categories
+                        </button>
+                    </div>
+
+
                 </div>
             </section>
 
