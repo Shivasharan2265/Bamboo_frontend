@@ -63,9 +63,14 @@ const Home = () => {
 
 const fetchCategories = async () => {
     try {
-       
-        const response = await axios.get("https://bamboo-backend.onrender.com/category");
-        console.log("Categories API Response:", response);
+        setLoading(true);
+        const response = await axios.get("https://bamboo-backend.onrender.com/category", {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            withCredentials: false // Add this
+        });
+        console.log("✅ Categories API Response:", response);
         if (response.data && response.data[0] && response.data[0].children) {
             setCategories(response.data[0].children);
         } else {
@@ -74,18 +79,24 @@ const fetchCategories = async () => {
     } catch (error) {
         console.error("❌ Category API Error:", error);
         setCategories([]);
-    } 
+    } finally {
+        setLoading(false);
+    }
 };
 
 const fetchProducts = async () => {
     try {
-       
+        setLoading(true);
         const page = 1;
         const limit = 8;
-         const response = await axios.get("https://bamboo-backend.onrender.com/api/products", {
+        const response = await axios.get("https://bamboo-backend.onrender.com/api/products", {
             params: { page, limit },
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            withCredentials: false // Add this
         });
-        console.log("Products API Response:", response);
+        console.log("✅ Products API Response:", response);
         if (response.data && response.data.products) {
             setProducts(response.data.products);
         } else {
@@ -94,7 +105,9 @@ const fetchProducts = async () => {
     } catch (error) {
         console.error("❌ Products API Error:", error);
         setProducts([]);
-    } 
+    } finally {
+        setLoading(false);
+    }
 };
 
 useEffect(() => {
@@ -191,7 +204,90 @@ const getUltraHighQualityImage = (url) => {
 
 
   // Show full page loader while loading
+if (loading) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: '#fff',
+        position: 'relative',
+      }}
+    >
+      <HeaderOne />
 
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+        }}
+      >
+        {/* Stick image on left */}
+        {/* <img
+          src={stick}
+          alt="bamboo stick"
+          style={{
+            height: '70px',
+            width: 'auto',
+            objectFit: 'contain',
+            
+          }}
+        /> */}
+
+        {/* Colorful loader */}
+        <div className="loader"></div>
+      </div>
+
+      <style>
+        {`
+          .loader {
+            --c1: no-repeat linear-gradient(#E37DCC 0 0);
+            --c2: no-repeat linear-gradient(#7DBA00 0 0);
+            --c3: no-repeat linear-gradient(#57C7C2 0 0);
+            --c4: no-repeat linear-gradient(#FCD647 0 0);
+            --c5: no-repeat linear-gradient(#E39963 0 0);
+            background:
+              var(--c1), var(--c2), var(--c3),
+              var(--c4), var(--c5), var(--c1),
+              var(--c2), var(--c3), var(--c4);
+            background-size: 16px 16px;
+            animation:
+              l32-1 1s infinite,
+              l32-2 1s infinite;
+          }
+
+          @keyframes l32-1 {
+            0%, 100% { width: 45px; height: 45px; }
+            35%, 65% { width: 65px; height: 65px; }
+          }
+
+          @keyframes l32-2 {
+            0%, 40% {
+              background-position:
+                0 0, 0 50%, 0 100%,
+                50% 100%, 100% 100%,
+                100% 50%, 100% 0,
+                50% 0, 50% 50%;
+            }
+            60%, 100% {
+              background-position:
+                0 50%, 0 100%, 50% 100%,
+                100% 100%, 100% 50%,
+                100% 0, 50% 0,
+                0 0, 50% 50%;
+            }
+          }
+
+          /* Bamboo stick floating effect */
+        
+        `}
+      </style>
+    </div>
+  );
+}
 
 
 

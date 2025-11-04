@@ -7,7 +7,6 @@ import table from "../assets/bamboo_table.jpg";
 import thread from "../assets/bamboo_thead.jpg";
 import spoon from "../assets/bamboo_spoon.jpeg";
 import HeaderOne from '../layout/Header copy';
-import api from '../utils/api';
 
 const Categories = () => {
     const navigate = useNavigate();
@@ -81,7 +80,7 @@ const Categories = () => {
     const fetchCategories = async () => {
         try {
             setLoading(true);
-          const response = await api.get("/category");
+            const response = await axios.get("https://bamboo-backend.onrender.com/category");
             console.log("✅ Categories API Response:", response.data);
 
             // Extract categories from the children array
