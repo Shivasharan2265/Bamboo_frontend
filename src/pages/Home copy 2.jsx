@@ -64,7 +64,7 @@ const Home = () => {
 const fetchCategories = async () => {
     try {
         setLoading(true);
-        const response = await axios.get("http://localhost:5055/api/category");
+        const response = await axios.get(`https://bamboo-backend.onrender.com/api/category`);
         if (response.data && response.data[0] && response.data[0].children) {
             setCategories(response.data[0].children);
         } else {
@@ -83,7 +83,7 @@ const fetchProducts = async () => {
         setLoading(true);
         const page = 1;
         const limit = 8;
-         const response = await axios.get("http://localhost:5055/api/products", {
+         const response = await axios.get(`https://bamboo-backend.onrender.com/api/products`, {
             params: { page, limit },
         });
         if (response.data && response.data.products) {
