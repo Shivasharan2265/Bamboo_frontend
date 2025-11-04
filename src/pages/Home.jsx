@@ -64,13 +64,7 @@ const Home = () => {
 const fetchCategories = async () => {
     try {
         setLoading(true);
-        const response = await axios.get("https://bamboo-backend.onrender.com/category", {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            withCredentials: false // Add this
-        });
-        console.log("✅ Categories API Response:", response);
+        const response = await axios.get("https://bamboo-backend.onrender.com/category");
         if (response.data && response.data[0] && response.data[0].children) {
             setCategories(response.data[0].children);
         } else {
@@ -89,14 +83,9 @@ const fetchProducts = async () => {
         setLoading(true);
         const page = 1;
         const limit = 8;
-        const response = await axios.get("https://bamboo-backend.onrender.com/api/products", {
+         const response = await axios.get("https://bamboo-backend.onrender.com/api/products", {
             params: { page, limit },
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            withCredentials: false // Add this
         });
-        console.log("✅ Products API Response:", response);
         if (response.data && response.data.products) {
             setProducts(response.data.products);
         } else {
@@ -109,6 +98,12 @@ const fetchProducts = async () => {
         setLoading(false);
     }
 };
+
+useEffect(() => {
+   fetchCategories();
+   fetchProducts();
+}, []);
+
 
 useEffect(() => {
     const fetchData = async () => {
