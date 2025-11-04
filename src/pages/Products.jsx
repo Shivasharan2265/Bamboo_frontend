@@ -6,6 +6,7 @@ import spoon from "../assets/bamboo_spoon.jpeg";
 import HeaderOne from '../layout/Header copy';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import api from '../utils/api';
 
 const Products = () => {
     const navigate = useNavigate();
@@ -83,7 +84,7 @@ const Products = () => {
     const fetchCategories = async () => {
         try {
             setCategoriesLoading(true);
-            const response = await axios.get("http://localhost:5055/api/category");
+            const response = await api.get("/category");
             console.log("✅ Categories API Response:", response.data);
 
             const categoriesData = response.data[0]?.children || [];
@@ -111,7 +112,7 @@ const Products = () => {
                 setFilters(prev => ({ ...prev, category: id }));
             }
 
-            const response = await axios.get("http://localhost:5055/api/products", {
+            const response = await api.get("/products", {
                 params: requestParams,
             });
 
@@ -152,7 +153,7 @@ const Products = () => {
                     category: category._id
                 };
 
-                const response = await axios.get("http://localhost:5055/api/products", {
+                const response = await api.get("/products", {
                     params: requestParams,
                 });
 

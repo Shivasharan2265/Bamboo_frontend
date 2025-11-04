@@ -30,7 +30,7 @@ const VerifyEmail = () => {
 
     const verifyEmailToken = async () => {
         try {
-            const response = await axios.post(`http://localhost:5055/api/customer/register/${token}`);
+            const response = await api.post(`/customer/register/${token}`);
             
             console.log("✅ Email verification successful:", response.data);
             

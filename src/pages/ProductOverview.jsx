@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import HeaderOne from '../layout/Header copy';
 import chair from "../assets/bamboo_chair.jpg";
 import axios from 'axios';
+import api from '../utils/api';
 
 const ProductOverview = () => {
     const { id } = useParams();
@@ -35,8 +36,8 @@ const ProductOverview = () => {
             try {
                 setLoading(true);
                 console.log(`🔄 Fetching product with ID: ${id}`);
-                
-                const response = await axios.post(`http://localhost:5055/api/products/${id}`);
+
+                const response = await api.post(`/products/${id}`);
                 console.log("✅ Product API Response:", response.data);
                 
                 setProduct(response.data);
@@ -97,7 +98,7 @@ const ProductOverview = () => {
                 exclude: currentProduct._id // Exclude current product
             };
 
-            const response = await axios.get("http://localhost:5055/api/products", {
+            const response = await api.get("/products", {
                 params: requestParams,
             });
 
@@ -273,7 +274,7 @@ const ProductOverview = () => {
                 return;
             }
 
-            const response = await axios.post('http://localhost:5055/api/order/add', cartItem, {
+            const response = await api.post('/order/add', cartItem, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'

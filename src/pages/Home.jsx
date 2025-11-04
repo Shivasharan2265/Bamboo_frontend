@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import image from "../assets/generated-image.png"
 import axios from 'axios';
 import Loader from './Loader';
+import api from '../utils/api';
 
 const Home = () => {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -64,7 +65,7 @@ const Home = () => {
 const fetchCategories = async () => {
     try {
         setLoading(true);
-        const response = await axios.get("http://localhost:5055/api/category");
+        const response = await api.get("/category");
         if (response.data && response.data[0] && response.data[0].children) {
             setCategories(response.data[0].children);
         } else {
@@ -83,9 +84,9 @@ const fetchProducts = async () => {
         setLoading(true);
         const page = 1;
         const limit = 8;
-         const response = await axios.get("http://localhost:5055/api/products", {
-            params: { page, limit },
-        });
+           const  response  = await api.get("/products", {
+        params: { page: 1, limit: 8 },
+      });
         if (response.data && response.data.products) {
             setProducts(response.data.products);
         } else {
