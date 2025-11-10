@@ -173,6 +173,7 @@ const Cart = () => {
                             letterSpacing: '1px',
                             borderRadius: '8px',
                             marginBottom: '20px',
+                             marginTop: '20px',
                             width: isMobile ? '100%' : 'auto',
                             maxWidth: isMobile ? '280px' : 'none'
                         }}

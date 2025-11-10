@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import HeaderOne from '../layout/Header copy';
+import API from '../api';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -92,7 +93,7 @@ const Register = () => {
         try {
             console.log("🔄 Attempting direct registration for:", formData.email);
 
-            const response = await axios.post('http://localhost:5055/api/customer/register-direct', {
+            const response = await API.post('/customer/register-direct', {
                 name: formData.name,
                 email: formData.email,
                 password: formData.password,

@@ -7,6 +7,7 @@ import table from "../assets/bamboo_table.jpg";
 import thread from "../assets/bamboo_thead.jpg";
 import spoon from "../assets/bamboo_spoon.jpeg";
 import HeaderOne from '../layout/Header copy';
+import API from '../api';
 
 const Categories = () => {
     const navigate = useNavigate();
@@ -40,19 +41,19 @@ const Categories = () => {
         if (category.image && category.image.trim() !== "") {
             return enhanceImageQuality(category.image, 600, 400);
         }
-        
+
         // Second priority: category icon with quality enhancement
         if (category.icon && category.icon.trim() !== "") {
             return enhanceImageQuality(category.icon, 600, 400);
         }
-        
+
         // Fallback to high-quality local images
         return fallbackImages[index % fallbackImages.length];
     };
 
     const enhanceImageQuality = (url, width = 600, height = 400) => {
         if (!url) return url;
-        
+
         // Cloudinary optimization for maximum quality
         if (url.includes('cloudinary.com')) {
             const parts = url.split('/upload/');
@@ -60,7 +61,7 @@ const Categories = () => {
                 return `${parts[0]}/upload/c_fill,w_${width},h_${height},q_auto:best,f_auto,fl_progressive:steep/${parts[1]}`;
             }
         }
-        
+
         // For other CDNs or direct URLs, return as is
         return url;
     };
@@ -80,7 +81,7 @@ const Categories = () => {
     const fetchCategories = async () => {
         try {
             setLoading(true);
-            const response = await axios.get("http://localhost:5055/api/category");
+            const response = await API.get("/category");
             console.log("✅ Categories API Response:", response.data);
 
             // Extract categories from the children array
@@ -129,6 +130,92 @@ const Categories = () => {
         return colors[index % colors.length];
     };
 
+    // Show full page loader while loading
+    if (loading) {
+        return (
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100vh',
+                    background: '#fff',
+                    position: 'relative',
+                }}
+            >
+                <HeaderOne />
+
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '20px',
+                    }}
+                >
+                    {/* Stick image on left */}
+                    {/* <img
+          src={stick}
+          alt="bamboo stick"
+          style={{
+            height: '70px',
+            width: 'auto',
+            objectFit: 'contain',
+            
+          }}
+        /> */}
+
+                    {/* Colorful loader */}
+                    <div className="loader"></div>
+                </div>
+
+                <style>
+                    {`
+          .loader {
+            --c1: no-repeat linear-gradient(#E37DCC 0 0);
+            --c2: no-repeat linear-gradient(#7DBA00 0 0);
+            --c3: no-repeat linear-gradient(#57C7C2 0 0);
+            --c4: no-repeat linear-gradient(#FCD647 0 0);
+            --c5: no-repeat linear-gradient(#E39963 0 0);
+            background:
+              var(--c1), var(--c2), var(--c3),
+              var(--c4), var(--c5), var(--c1),
+              var(--c2), var(--c3), var(--c4);
+            background-size: 16px 16px;
+            animation:
+              l32-1 1s infinite,
+              l32-2 1s infinite;
+          }
+
+          @keyframes l32-1 {
+            0%, 100% { width: 45px; height: 45px; }
+            35%, 65% { width: 65px; height: 65px; }
+          }
+
+          @keyframes l32-2 {
+            0%, 40% {
+              background-position:
+                0 0, 0 50%, 0 100%,
+                50% 100%, 100% 100%,
+                100% 50%, 100% 0,
+                50% 0, 50% 50%;
+            }
+            60%, 100% {
+              background-position:
+                0 50%, 0 100%, 50% 100%,
+                100% 100%, 100% 50%,
+                100% 0, 50% 0,
+                0 0, 50% 50%;
+            }
+          }
+
+          /* Bamboo stick floating effect */
+        
+        `}
+                </style>
+            </div>
+        );
+    }
+
     return (
         <div style={{
             width: '100%',
@@ -158,7 +245,7 @@ const Categories = () => {
                     background: 'radial-gradient(circle at 20% 80%, rgba(227, 125, 204, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(125, 186, 0, 0.05) 0%, transparent 50%)',
                     zIndex: 0
                 }}></div>
-                
+
                 <div style={{
                     maxWidth: '800px',
                     margin: '0 auto',
@@ -198,29 +285,7 @@ const Categories = () => {
                     margin: '0 auto'
                 }}>
 
-                    {loading ? (
-                        // Loading State
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-                            gap: isMobile ? '20px' : '30px'
-                        }}>
-                            {[1, 2, 3, 4, 5, 6].map((item) => (
-                                <div key={item} style={{
-                                    height: isMobile ? '250px' : '300px',
-                                    backgroundColor: '#F8F8F8',
-                                    borderRadius: '15px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#E37DCC',
-                                    fontSize: '1rem'
-                                }}>
-                                    Loading...
-                                </div>
-                            ))}
-                        </div>
-                    ) : categories.length > 0 ? (
+                    {categories.length > 0 ? (
                         <div style={{
                             display: 'grid',
                             gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
@@ -272,47 +337,7 @@ const Categories = () => {
                                             height: '100%',
                                             overflow: 'hidden'
                                         }}>
-                                            {/* Loading State */}
-                                            {imageLoading[category._id] && (
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    top: 0,
-                                                    left: 0,
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    backgroundColor: '#f8f8f8',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    zIndex: 1,
-                                                    borderRadius: '15px'
-                                                }}>
-                                                    <div style={{
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        alignItems: 'center',
-                                                        gap: '10px'
-                                                    }}>
-                                                        <div style={{
-                                                            width: '30px',
-                                                            height: '30px',
-                                                            border: '2px solid #f0f0f0',
-                                                            borderTop: `2px solid ${colors.primary}`,
-                                                            borderRadius: '50%',
-                                                            animation: 'spin 1s linear infinite'
-                                                        }}></div>
-                                                        <div style={{
-                                                            color: colors.primary,
-                                                            fontSize: '12px',
-                                                            fontWeight: '500'
-                                                        }}>
-                                                            Loading...
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* High Quality Image */}
+                                            {/* Image */}
                                             <img
                                                 src={getHighQualityCategoryImage(category, index)}
                                                 alt={getCategoryName(category)}
@@ -321,10 +346,8 @@ const Categories = () => {
                                                     height: "100%",
                                                     objectFit: "cover",
                                                     transition: "transform 0.4s ease",
-                                                    opacity: imageLoading[category._id] ? 0 : 1,
                                                     imageRendering: "crisp-edges"
                                                 }}
-                                                onLoad={() => handleImageLoad(category._id)}
                                                 onError={(e) => handleImageError(category._id, index, e)}
                                             />
 
@@ -379,27 +402,25 @@ const Categories = () => {
                                                         flexShrink: 0,
                                                         marginLeft: '10px'
                                                     }}>
-                                                        <svg 
-                                                            width="16" 
-                                                            height="16" 
-                                                            viewBox="0 0 24 24" 
-                                                            fill="none" 
+                                                        <svg
+                                                            width="16"
+                                                            height="16"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
                                                             xmlns="http://www.w3.org/2000/svg"
-                                                            style={{
-                                                                color: colors.primary
-                                                            }}
+                                                            style={{ color: colors.primary }}
                                                         >
-                                                            <path 
-                                                                d="M5 12H19M19 12L12 5M19 12L12 19" 
-                                                                stroke="currentColor" 
-                                                                strokeWidth="2" 
-                                                                strokeLinecap="round" 
+                                                            <path
+                                                                d="M5 12H19M19 12L12 5M19 12L12 19"
+                                                                stroke="currentColor"
+                                                                strokeWidth="2"
+                                                                strokeLinecap="round"
                                                                 strokeLinejoin="round"
                                                             />
                                                         </svg>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <p style={{
                                                     fontSize: isMobile ? '0.85rem' : '0.9rem',
                                                     margin: '5px 0 0 0',
@@ -415,7 +436,6 @@ const Categories = () => {
                                                     {getCategoryDescription(category)}
                                                 </p>
 
-                                                {/* Decorative Line */}
                                                 <div style={{
                                                     width: '40px',
                                                     height: '2px',
@@ -437,6 +457,7 @@ const Categories = () => {
                                                 opacity: 0.6
                                             }}></div>
                                         </div>
+
 
                                         {/* Hover Effect Border */}
                                         <div style={{

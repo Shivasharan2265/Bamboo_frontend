@@ -105,6 +105,8 @@ const Header = () => {
     { label: "About", href: "/about-us" },
     { label: "Contact", href: "/contact" },
     { label: "FAQs", href: "/faq" },
+    { label: "Profile", href: "/profile" },
+
   ];
 
   return (

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import HeaderOne from "../layout/Header copy";
 import { useNavigate } from "react-router-dom";
+import API from "../api";
 
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -13,7 +14,7 @@ const MyOrders = () => {
     fetchOrders();
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => {
       window.removeEventListener('resize', checkMobile);
     };
@@ -32,7 +33,7 @@ const MyOrders = () => {
         return;
       }
 
-      const response = await axios.get("http://localhost:5055/api/order", {
+      const response = await API.get("/order", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -74,38 +75,87 @@ const MyOrders = () => {
     }).format(price);
   };
 
+  // Show full page loader while loading
   if (loading) {
     return (
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "80px 20px",
-        textAlign: "center",
-        marginTop: isMobile ? "70px" : "100px"
-      }}>
-        <div style={{
-          width: "40px",
-          height: "40px",
-          border: "4px solid #e5e7eb",
-          borderTop: "4px solid #e39963",
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite",
-          marginBottom: "20px"
-        }}></div>
-        <p style={{
-          fontSize: "1rem",
-          color: "#6b7280",
-          margin: 0
-        }}>Loading your orders...</p>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          background: '#fff',
+          position: 'relative',
+        }}
+      >
+        <HeaderOne />
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '20px',
+          }}
+        >
+          {/* Stick image on left */}
+          {/* <img
+          src={stick}
+          alt="bamboo stick"
+          style={{
+            height: '70px',
+            width: 'auto',
+            objectFit: 'contain',
+            
+          }}
+        /> */}
+
+          {/* Colorful loader */}
+          <div className="loader"></div>
+        </div>
+
         <style>
           {`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
+          .loader {
+            --c1: no-repeat linear-gradient(#E37DCC 0 0);
+            --c2: no-repeat linear-gradient(#7DBA00 0 0);
+            --c3: no-repeat linear-gradient(#57C7C2 0 0);
+            --c4: no-repeat linear-gradient(#FCD647 0 0);
+            --c5: no-repeat linear-gradient(#E39963 0 0);
+            background:
+              var(--c1), var(--c2), var(--c3),
+              var(--c4), var(--c5), var(--c1),
+              var(--c2), var(--c3), var(--c4);
+            background-size: 16px 16px;
+            animation:
+              l32-1 1s infinite,
+              l32-2 1s infinite;
+          }
+
+          @keyframes l32-1 {
+            0%, 100% { width: 45px; height: 45px; }
+            35%, 65% { width: 65px; height: 65px; }
+          }
+
+          @keyframes l32-2 {
+            0%, 40% {
+              background-position:
+                0 0, 0 50%, 0 100%,
+                50% 100%, 100% 100%,
+                100% 50%, 100% 0,
+                50% 0, 50% 50%;
             }
-          `}
+            60%, 100% {
+              background-position:
+                0 50%, 0 100%, 50% 100%,
+                100% 100%, 100% 50%,
+                100% 0, 50% 0,
+                0 0, 50% 50%;
+            }
+          }
+
+          /* Bamboo stick floating effect */
+        
+        `}
         </style>
       </div>
     );
@@ -129,7 +179,7 @@ const MyOrders = () => {
         margin: "0 auto",
         padding: isMobile ? "20px 15px" : "40px 20px",
       }}>
-        
+
         {/* Breadcrumbs */}
         <div style={{
           marginBottom: isMobile ? "25px" : "30px",
@@ -143,8 +193,8 @@ const MyOrders = () => {
             fontSize: isMobile ? "14px" : "15px",
             color: "#6b7280"
           }}>
-            <span 
-              style={{ 
+            <span
+              style={{
                 cursor: "pointer",
                 color: "#e39963",
                 transition: "color 0.3s ease"
@@ -216,7 +266,7 @@ const MyOrders = () => {
             }}>
               You haven't placed any orders. Start shopping to see your orders here.
             </p>
-            <button 
+            <button
               style={{
                 background: "#e39963",
                 color: "white",
@@ -249,8 +299,8 @@ const MyOrders = () => {
             gap: isMobile ? "20px" : "24px"
           }}>
             {orders.map((order) => (
-              <div 
-                key={order._id} 
+              <div
+                key={order._id}
                 style={{
                   background: "white",
                   border: "1px solid #e5e7eb",
@@ -301,7 +351,7 @@ const MyOrders = () => {
                   <div style={{
                     alignSelf: isMobile ? "flex-start" : "auto"
                   }}>
-                    <span 
+                    <span
                       style={{
                         padding: isMobile ? "4px 10px" : "6px 12px",
                         borderRadius: "20px",
@@ -321,8 +371,8 @@ const MyOrders = () => {
                 {/* Order Items */}
                 <div style={{ marginBottom: isMobile ? "16px" : "20px" }}>
                   {order.cart.map((item, index) => (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       style={{
                         display: "flex",
                         alignItems: isMobile ? "flex-start" : "center",
@@ -331,8 +381,8 @@ const MyOrders = () => {
                         gap: isMobile ? "12px" : "0"
                       }}
                     >
-                      <img 
-                        src={item.image} 
+                      <img
+                        src={item.image}
                         alt={item.name}
                         style={{
                           width: isMobile ? "50px" : "60px",
@@ -346,7 +396,7 @@ const MyOrders = () => {
                           e.target.src = "https://via.placeholder.com/80x80?text=No+Image";
                         }}
                       />
-                      <div style={{ 
+                      <div style={{
                         flex: 1,
                         minWidth: 0 // Prevents flex item from overflowing
                       }}>
@@ -400,7 +450,7 @@ const MyOrders = () => {
                     <span>Subtotal:</span>
                     <span>{formatPrice(order.subTotal)}</span>
                   </div>
-                  
+
                   {order.discount > 0 && (
                     <div style={{
                       display: "flex",
@@ -414,7 +464,7 @@ const MyOrders = () => {
                       <span>-{formatPrice(order.discount)}</span>
                     </div>
                   )}
-                  
+
                   <div style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -425,7 +475,7 @@ const MyOrders = () => {
                     <span>Shipping:</span>
                     <span>{formatPrice(order.shippingCost)}</span>
                   </div>
-                  
+
                   <div style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -440,7 +490,7 @@ const MyOrders = () => {
                     <span>Total:</span>
                     <span>{formatPrice(order.total)}</span>
                   </div>
-                  
+
                   <div style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -450,7 +500,7 @@ const MyOrders = () => {
                     fontSize: isMobile ? "0.85rem" : "1rem"
                   }}>
                     <span>Payment Method:</span>
-                    <span style={{ 
+                    <span style={{
                       textTransform: "capitalize",
                       fontSize: isMobile ? "0.8rem" : "1rem"
                     }}>
@@ -460,13 +510,13 @@ const MyOrders = () => {
                 </div>
 
                 {/* Order Actions */}
-                <div style={{
+                {/* <div style={{
                   display: "flex",
                   flexDirection: isMobile ? "column" : "row",
                   gap: isMobile ? "8px" : "12px",
                   justifyContent: "flex-end"
                 }}>
-                  <button 
+                  <button
                     style={{
                       padding: isMobile ? "12px 16px" : "10px 20px",
                       borderRadius: "6px",
@@ -494,7 +544,7 @@ const MyOrders = () => {
                   >
                     View Details
                   </button>
-                  <button 
+                  <button
                     style={{
                       padding: isMobile ? "12px 16px" : "10px 20px",
                       borderRadius: "6px",
@@ -522,7 +572,7 @@ const MyOrders = () => {
                   >
                     Track Order
                   </button>
-                </div>
+                </div> */}
               </div>
             ))}
           </div>

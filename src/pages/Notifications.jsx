@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import HeaderOne from '../layout/Header copy';
+import API from '../api';
 
 const Notifications = () => {
     const navigate = useNavigate();
@@ -39,7 +40,7 @@ const Notifications = () => {
 
             console.log("🔄 Fetching notifications for page:", currentPage);
 
-            const response = await axios.get(`http://localhost:5055/api/notification?page=${currentPage}`, {
+            const response = await API.get(`/notification?page=${currentPage}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 }
@@ -65,8 +66,8 @@ const Notifications = () => {
             setActionLoading(true);
             const token = localStorage.getItem('token');
 
-            await axios.put(
-                `http://localhost:5055/api/notification/${notificationId}`,
+            await API.put(
+                `/notification/${notificationId}`,
                 { status: 'read' },
                 {
                     headers: {
@@ -104,8 +105,8 @@ const Notifications = () => {
 
             if (unreadIds.length === 0) return;
 
-            await axios.put(
-                `http://localhost:5055/api/notification/many`,
+            await API.put(
+                `/notification/many`,
                 { 
                     ids: unreadIds,
                     status: 'read'
@@ -141,8 +142,8 @@ const Notifications = () => {
             setActionLoading(true);
             const token = localStorage.getItem('token');
 
-            await axios.delete(
-                `http://localhost:5055/api/notification/${notificationId}`,
+            await API.delete(
+                `/notification/${notificationId}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -176,8 +177,8 @@ const Notifications = () => {
             const token = localStorage.getItem('token');
             const selectedIds = Array.from(selectedNotifications);
 
-            await axios.delete(
-                `http://localhost:5055/api/notification/many`,
+            await API.delete(
+                `/notification/many`,
                 {
                     data: { ids: selectedIds },
                     headers: {

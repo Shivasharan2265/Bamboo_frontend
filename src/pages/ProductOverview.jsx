@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import HeaderOne from '../layout/Header copy';
 import chair from "../assets/bamboo_chair.jpg";
 import axios from 'axios';
+import API from '../api';
 
 const ProductOverview = () => {
     const { id } = useParams();
@@ -47,7 +48,7 @@ const ProductOverview = () => {
                 setLoading(true);
                 console.log(`🔄 Fetching product with ID: ${id}`);
 
-                const response = await axios.post(`http://localhost:5055/api/products/${id}`);
+                const response = await API.post(`/products/${id}`);
                 console.log("✅ Product API Response:", response.data);
 
                 setProduct(response.data);
@@ -107,7 +108,7 @@ const ProductOverview = () => {
                 exclude: currentProduct._id
             };
 
-            const response = await axios.get("http://localhost:5055/api/products", {
+            const response = await API.get("/products", {
                 params: requestParams,
             });
 
@@ -305,29 +306,91 @@ const ProductOverview = () => {
         return `$${parseFloat(price).toFixed(2)}`;
     };
 
-    if (loading) {
-        return (
-            <div style={{
-                width: '100%',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
-                marginTop: isMobile ? '70px' : '100px',
-                padding: isMobile ? '60px 20px' : '100px 20px',
-                textAlign: 'center',
-                backgroundColor: '#FFFFFF',
-                minHeight: '100vh'
-            }}>
-                <HeaderOne />
-                <h2 style={{
-                    fontSize: isMobile ? '1.5rem' : '2rem',
-                    fontWeight: '300',
-                    color: '#57C7C2',
-                    marginBottom: '20px'
-                }}>
-                    Loading Product...
-                </h2>
-            </div>
-        );
-    }
+  // Show full page loader while loading
+if (loading) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: '#fff',
+        position: 'relative',
+      }}
+    >
+      <HeaderOne />
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+        }}
+      >
+        {/* Stick image on left */}
+        {/* <img
+          src={stick}
+          alt="bamboo stick"
+          style={{
+            height: '70px',
+            width: 'auto',
+            objectFit: 'contain',
+            
+          }}
+        /> */}
+
+        {/* Colorful loader */}
+        <div className="loader"></div>
+      </div>
+
+      <style>
+        {`
+          .loader {
+            --c1: no-repeat linear-gradient(#E37DCC 0 0);
+            --c2: no-repeat linear-gradient(#7DBA00 0 0);
+            --c3: no-repeat linear-gradient(#57C7C2 0 0);
+            --c4: no-repeat linear-gradient(#FCD647 0 0);
+            --c5: no-repeat linear-gradient(#E39963 0 0);
+            background:
+              var(--c1), var(--c2), var(--c3),
+              var(--c4), var(--c5), var(--c1),
+              var(--c2), var(--c3), var(--c4);
+            background-size: 16px 16px;
+            animation:
+              l32-1 1s infinite,
+              l32-2 1s infinite;
+          }
+
+          @keyframes l32-1 {
+            0%, 100% { width: 45px; height: 45px; }
+            35%, 65% { width: 65px; height: 65px; }
+          }
+
+          @keyframes l32-2 {
+            0%, 40% {
+              background-position:
+                0 0, 0 50%, 0 100%,
+                50% 100%, 100% 100%,
+                100% 50%, 100% 0,
+                50% 0, 50% 50%;
+            }
+            60%, 100% {
+              background-position:
+                0 50%, 0 100%, 50% 100%,
+                100% 100%, 100% 50%,
+                100% 0, 50% 0,
+                0 0, 50% 50%;
+            }
+          }
+
+          /* Bamboo stick floating effect */
+        
+        `}
+      </style>
+    </div>
+  );
+}
 
     if (error || !product) {
         return (

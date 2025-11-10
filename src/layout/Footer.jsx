@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import logo from "../assets/cbamboo.png";
 import stick from "../assets/bamboostick.png";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 
 const Footer = () => {
   const [isMobile, setIsMobile] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -280,8 +281,8 @@ const Footer = () => {
                     link === "Contact" ? "/contact" :
                       link === "Shipping" ? "/shipping-policy" :
                         link === "Returns" ? "/return-refund-policy" :
-                          link === "Payment Policy" ? "/payment-policy" :
-                            link === "Cancellation" ? "/cancellation" : "/"
+                          link === "Payment Policy" ? "/return-refund-policy" :
+                            link === "Cancellation" ? "/shipping-policy" : "/"
                   }
                   style={{
                     color: '#434242',
@@ -426,34 +427,36 @@ const Footer = () => {
             justifyContent: isMobile ? 'center' : 'flex-end'
           }}>
             {[
-              { name: 'Privacy', color: '#E37DCC' },
-              { name: 'Terms', color: '#7DBA00' },
-              { name: 'Accessibility', color: '#57C7C2' }
+           
+              { name: 'Terms & Conditions', color: '#7DBA00' },
+           
             ].map((link) => (
-              <a
-                key={link.name}
-                href="#"
-                style={{
-                  color: '#434242',
-                  textDecoration: 'none',
-                  fontSize: isMobile ? '12px' : '13px',
-                  transition: 'all 0.3s ease',
-                  opacity: 0.7,
-                  position: 'relative'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.color = link.color;
-                  e.target.style.opacity = '1';
-                  e.target.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.color = '#434242';
-                  e.target.style.opacity = '0.7';
-                  e.target.style.transform = 'translateY(0)';
-                }}
-              >
-                {link.name}
-              </a>
+             <a
+  key={link.name}
+  onClick={() => navigate('/terms-conditions')}
+  style={{
+    color: '#434242',
+    textDecoration: 'none',
+    fontSize: isMobile ? '12px' : '13px',
+    transition: 'all 0.3s ease',
+    opacity: 0.7,
+    position: 'relative',
+    cursor: 'pointer'
+  }}
+  onMouseEnter={(e) => {
+    e.target.style.color = link.color;
+    e.target.style.opacity = '1';
+    e.target.style.transform = 'translateY(-1px)';
+  }}
+  onMouseLeave={(e) => {
+    e.target.style.color = '#434242';
+    e.target.style.opacity = '0.7';
+    e.target.style.transform = 'translateY(0)';
+  }}
+>
+  {link.name}
+</a>
+
             ))}
           </div>
         </div>

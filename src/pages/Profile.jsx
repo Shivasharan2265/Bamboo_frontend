@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import HeaderOne from '../layout/Header copy';
+import API from '../api';
 
 const Profile = () => {
     const navigate = useNavigate();
@@ -42,7 +43,7 @@ const Profile = () => {
 
             console.log("🔄 Fetching user profile for:", id);
 
-            const response = await axios.get(`http://localhost:5055/api/customer/${id}`, {
+            const response = await API.get(`/customer/${id}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 }
@@ -100,8 +101,8 @@ const Profile = () => {
             console.log("🔄 Updating profile for:", id);
             console.log("📝 Update data:", editData);
 
-            const response = await axios.put(
-                `http://localhost:5055/api/customer/${id}`,
+            const response = await API.put(
+                `/customer/${id}`,
                 {
                     name: editData.name,
                     email: editData.email,

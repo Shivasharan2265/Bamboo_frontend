@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import HeaderOne from '../layout/Header copy';
 import chair from "../assets/bamboo_chair.jpg";
 import axios from 'axios';
+import API from '../api';
 
 const Checkout = () => {
     const navigate = useNavigate();
@@ -128,7 +129,7 @@ const Checkout = () => {
 
             console.log("📤 Sending Order Data:", orderData);
 
-            const response = await axios.post('http://localhost:5055/api/order/add', orderData, {
+            const response = await API.post('/order/add', orderData, {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
@@ -595,7 +596,7 @@ const Checkout = () => {
                             Continue Shopping
                         </button>
                         <button
-                            onClick={() => navigate('/orders')}
+                            onClick={() => navigate('/my-orders')}
                             style={{
                                 padding: isMobile ? '12px 20px' : '14px 30px',
                                 backgroundColor: 'transparent',
