@@ -21,6 +21,9 @@ import DeliveryPolicy from "./pages/DeliveryPolicy";
 import ReturnRefundPolicy from "./pages/ReturnRefundPolicy";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
+import MyOrders from "./pages/MyOrders";
+import Profile from "./pages/Profile";
+import Notifications from "./pages/Notifications";
 
 const App = () => {
   const { pathname } = useLocation();
@@ -44,6 +47,15 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+
+        <Route path="/profile" element={<Profile />} />
+
+        <Route path="/notifications" element={<Notifications />} />
+
+
+
+        <Route path="/my-orders" element={<MyOrders />} />
+
         <Route path="/categories" element={<Categories />} />
 
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import HeaderOne from '../layout/Header copy';
-import api from '../utils/api';
+import API from '../api';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -72,7 +72,7 @@ const Login = () => {
 
         try {
             // Make API call to your backend login endpoint
-            const response = await api.post('/customer/login', {
+            const response = await API.post('/customer/login', {
                 email: formData.email,
                 password: formData.password
             });

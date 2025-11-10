@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HeaderOne from '../layout/Header copy';
 import chair from "../assets/bamboo_chair.jpg";
+import axios from 'axios';
 
 const Checkout = () => {
     const navigate = useNavigate();
@@ -10,6 +11,7 @@ const Checkout = () => {
     const [orderComplete, setOrderComplete] = useState(false);
     const [orderNumber, setOrderNumber] = useState('');
     const [cartItems, setCartItems] = useState([]);
+    const [orderResponse, setOrderResponse] = useState(null); // NEW: Store the API response
 
     const [formData, setFormData] = useState({
         email: '',
@@ -83,7 +85,7 @@ const Checkout = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         // Check if cart is empty
         if (cartItems.length === 0) {
             alert('Your cart is empty. Please add items to your cart before proceeding to checkout.');
@@ -91,21 +93,71 @@ const Checkout = () => {
             return;
         }
 
-        setIsProcessing(true);
+        try {
+            setIsProcessing(true);
 
-        // Simulate payment processing
-        setTimeout(() => {
-            const newOrderNumber = generateOrderNumber();
+            // Prepare order data - match the exact field names from your backend model
+            const orderData = {
+                cart: cartItems.map(item => ({
+                    productId: item.productId,
+                    name: item.name || item.title,
+                    price: item.price,
+                    quantity: item.quantity,
+                    image: item.image,
+                })),
+                shippingAddress: {
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    address: formData.address,
+                    city: formData.city,
+                    state: formData.state,
+                    zipCode: formData.zipCode,
+                    email: formData.email,
+                },
+                paymentMethod: 'card',
+                paymentStatus: 'pending',
+                subTotal: getSubtotal(), // Changed from 'subtotal' to 'subTotal'
+                shippingCost: getShipping(), // Changed from 'shipping' to 'shippingCost'
+                tax: getTax(),
+                total: getTotal(),
+                status: 'Pending',
+            };
+
+            // Get auth token
+            const token = localStorage.getItem('authToken');
+
+            console.log("📤 Sending Order Data:", orderData);
+
+            const response = await axios.post('http://localhost:5055/api/order/add', orderData, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            console.log("✅ Order API Response:", response.data);
+
+            // NEW: Save the complete API response
+            setOrderResponse(response.data);
+
+            // Success
+            const newOrderNumber = response.data._id || generateOrderNumber();
             setOrderNumber(newOrderNumber);
-            setIsProcessing(false);
             setOrderComplete(true);
-            
+
             // Clear cart after successful order
             localStorage.removeItem('cart');
             setCartItems([]);
-            
+
             window.scrollTo(0, 0);
-        }, 2000);
+
+        } catch (error) {
+            console.error("❌ Order API Error:", error);
+            console.log("🚫 Error details:", error.response?.data || error.message);
+            alert('There was an error processing your order. Please try again.');
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     const continueShopping = () => navigate('/products');
@@ -135,7 +187,7 @@ const Checkout = () => {
                     }}>
                         🛒
                     </div>
-                    
+
                     <h1 style={{
                         fontSize: isMobile ? '1.8rem' : '2.5rem',
                         fontWeight: '400',
@@ -145,7 +197,7 @@ const Checkout = () => {
                     }}>
                         Your Cart is Empty
                     </h1>
-                    
+
                     <p style={{
                         fontSize: isMobile ? '16px' : '18px',
                         color: '#666',
@@ -157,7 +209,7 @@ const Checkout = () => {
                     }}>
                         Add some products to your cart before proceeding to checkout.
                     </p>
-                    
+
                     <button
                         onClick={continueShopping}
                         style={{
@@ -183,7 +235,6 @@ const Checkout = () => {
             </div>
         );
     }
-
     if (orderComplete) {
         return (
             <div style={{
@@ -196,9 +247,9 @@ const Checkout = () => {
                 <HeaderOne />
 
                 <div style={{
-                    maxWidth: '600px',
+                    maxWidth: '800px',
                     margin: '0 auto',
-                    padding: isMobile ? '40px 15px' : '100px 20px',
+                    padding: isMobile ? '20px 15px' : '40px 20px',
                     textAlign: 'center'
                 }}>
                     <div style={{
@@ -223,46 +274,363 @@ const Checkout = () => {
                         fontSize: isMobile ? '13px' : '16px',
                         color: '#666',
                         lineHeight: '1.5',
-                        marginBottom: isMobile ? '8px' : '10px',
+                        marginBottom: isMobile ? '20px' : '30px',
                         padding: '0 15px'
                     }}>
                         Thank you for your purchase. Your order has been confirmed and will be shipped soon.
                     </p>
 
-                    <p style={{
-                        fontSize: isMobile ? '12px' : '14px',
-                        color: '#57C7C2',
-                        fontWeight: '600',
-                        marginBottom: isMobile ? '20px' : '30px',
-                        padding: '8px 12px',
-                        backgroundColor: 'rgba(87, 199, 194, 0.1)',
-                        borderRadius: '6px',
-                        display: 'inline-block',
-                        wordBreak: 'break-all'
+                    {/* Order Details Card */}
+                    <div style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '12px',
+                        padding: isMobile ? '20px' : '30px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        border: '1px solid rgba(87, 199, 194, 0.2)',
+                        marginBottom: '30px',
+                        textAlign: 'left'
                     }}>
-                        Order #: {orderNumber}
-                    </p>
+                        <h2 style={{
+                            fontSize: isMobile ? '1.1rem' : '1.4rem',
+                            fontWeight: '600',
+                            color: '#434242',
+                            marginBottom: '20px',
+                            textAlign: 'center',
+                            borderBottom: '2px solid #57C7C2',
+                            paddingBottom: '10px'
+                        }}>
+                            Order Details
+                        </h2>
 
-                    <button
-                        onClick={continueShopping}
-                        style={{
-                            padding: isMobile ? '12px 20px' : '14px 30px',
-                            backgroundColor: '#7DBA00',
-                            border: 'none',
-                            color: '#FFFFFF',
-                            fontSize: isMobile ? '14px' : '16px',
-                            fontWeight: '500',
-                            cursor: 'pointer',
+                        {/* Order Number & Date */}
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: isMobile ? 'column' : 'row',
+                            justifyContent: 'space-between',
+                            gap: '15px',
+                            marginBottom: '20px'
+                        }}>
+                            <div>
+                                <strong style={{ color: '#57C7C2' }}>Order Number:</strong>
+                                <div style={{ color: '#434242', fontWeight: '500' }}>
+                                    #{orderResponse?.invoice || orderNumber}
+                                </div>
+                            </div>
+                            <div>
+                                <strong style={{ color: '#57C7C2' }}>Order Date:</strong>
+                                <div style={{ color: '#434242', fontWeight: '500' }}>
+                                    {orderResponse?.createdAt ?
+                                        new Date(orderResponse.createdAt).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        }) :
+                                        new Date().toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                        })
+                                    }
+                                </div>
+                            </div>
+                            <div>
+                                <strong style={{ color: '#57C7C2' }}>Status:</strong>
+                                <div style={{
+                                    color: orderResponse?.status === 'Pending' ? '#E37DCC' : '#7DBA00',
+                                    fontWeight: '600',
+                                    backgroundColor: orderResponse?.status === 'Pending' ? 'rgba(227, 125, 204, 0.1)' : 'rgba(125, 186, 0, 0.1)',
+                                    padding: '4px 12px',
+                                    borderRadius: '20px',
+                                    display: 'inline-block'
+                                }}>
+                                    {orderResponse?.status || 'Confirmed'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Order Items */}
+                        <div style={{ marginBottom: '25px' }}>
+                            <h3 style={{
+                                fontSize: '1.1rem',
+                                fontWeight: '600',
+                                color: '#434242',
+                                marginBottom: '15px',
+                                borderBottom: '1px solid #eee',
+                                paddingBottom: '8px'
+                            }}>
+                                Items Ordered ({orderResponse?.cart?.length || cartItems.length})
+                            </h3>
+                            {(orderResponse?.cart || cartItems).map((item, index) => (
+                                <div key={item.productId || index} style={{
+                                    display: 'flex',
+                                    gap: '15px',
+                                    padding: '12px 0',
+                                    borderBottom: '1px solid rgba(87, 199, 194, 0.1)',
+                                    alignItems: 'center'
+                                }}>
+                                    <div style={{
+                                        width: '50px',
+                                        height: '50px',
+                                        borderRadius: '6px',
+                                        overflow: 'hidden',
+                                        flexShrink: 0,
+                                        border: '2px solid rgba(125, 186, 0, 0.2)'
+                                    }}>
+                                        <img
+                                            src={item.image || getImageSrc(item)}
+                                            alt={item.name}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <h4 style={{
+                                            fontSize: '14px',
+                                            fontWeight: '600',
+                                            color: '#434242',
+                                            margin: '0 0 4px 0'
+                                        }}>
+                                            {item.name}
+                                        </h4>
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center'
+                                        }}>
+                                            <span style={{
+                                                fontSize: '13px',
+                                                color: '#E39963',
+                                                fontWeight: '500'
+                                            }}>
+                                                Qty: {item.quantity}
+                                            </span>
+                                            <span style={{
+                                                fontSize: '14px',
+                                                fontWeight: '600',
+                                                color: '#7DBA00'
+                                            }}>
+                                                ${(item.price * item.quantity).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Order Summary - Using API Data */}
+                        <div style={{
+                            backgroundColor: 'rgba(87, 199, 194, 0.05)',
                             borderRadius: '8px',
-                            width: isMobile ? '90%' : 'auto',
-                            maxWidth: isMobile ? '280px' : '280px',
-                            transition: 'all 0.3s ease',
-                            margin: '0 auto',
-                            display: 'block'
-                        }}
-                    >
-                        Continue Shopping
-                    </button>
+                            padding: '20px',
+                            border: '1px solid rgba(87, 199, 194, 0.2)'
+                        }}>
+                            <h3 style={{
+                                fontSize: '1.1rem',
+                                fontWeight: '600',
+                                color: '#434242',
+                                marginBottom: '15px'
+                            }}>
+                                Order Summary
+                            </h3>
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '10px'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#666' }}>Subtotal</span>
+                                    <span style={{ fontWeight: '500' }}>
+                                        ${orderResponse?.subTotal?.toFixed(2) || getSubtotal().toFixed(2)}
+                                    </span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#666' }}>Shipping</span>
+                                    <span style={{
+                                        fontWeight: '500',
+                                        color: (orderResponse?.shippingCost === 0 || getShipping() === 0) ? '#7DBA00' : '#E37DCC'
+                                    }}>
+                                        {orderResponse?.shippingCost === 0 || getShipping() === 0 ?
+                                            'FREE' :
+                                            `$${(orderResponse?.shippingCost || getShipping()).toFixed(2)}`
+                                        }
+                                    </span>
+                                </div>
+                                {orderResponse?.discount > 0 && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span style={{ color: '#666' }}>Discount</span>
+                                        <span style={{ fontWeight: '500', color: '#E37DCC' }}>
+                                            -${orderResponse.discount.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#666' }}>Tax</span>
+                                    <span style={{ fontWeight: '500' }}>
+                                        ${orderResponse?.tax?.toFixed(2) || getTax().toFixed(2)}
+                                    </span>
+                                </div>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    paddingTop: '10px',
+                                    borderTop: '2px solid #57C7C2',
+                                    marginTop: '5px'
+                                }}>
+                                    <span style={{
+                                        fontSize: '16px',
+                                        fontWeight: '600',
+                                        color: '#434242'
+                                    }}>
+                                        Total
+                                    </span>
+                                    <span style={{
+                                        fontSize: '18px',
+                                        fontWeight: '600',
+                                        color: '#7DBA00'
+                                    }}>
+                                        ${orderResponse?.total?.toFixed(2) || getTotal().toFixed(2)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Payment Information */}
+                        <div style={{ marginTop: '25px' }}>
+                            <h3 style={{
+                                fontSize: '1.1rem',
+                                fontWeight: '600',
+                                color: '#434242',
+                                marginBottom: '15px',
+                                borderBottom: '1px solid #eee',
+                                paddingBottom: '8px'
+                            }}>
+                                Payment Information
+                            </h3>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                                gap: '15px'
+                            }}>
+                                <div>
+                                    <strong style={{ color: '#57C7C2' }}>Payment Method:</strong>
+                                    <div style={{ color: '#434242' }}>
+                                        {orderResponse?.paymentMethod === 'card' ? 'Credit/Debit Card' : orderResponse?.paymentMethod}
+                                    </div>
+                                </div>
+                                <div>
+                                    <strong style={{ color: '#57C7C2' }}>Payment Status:</strong>
+                                    <div style={{
+                                        color: orderResponse?.paymentStatus === 'pending' ? '#E37DCC' : '#7DBA00',
+                                        fontWeight: '500'
+                                    }}>
+                                        {orderResponse?.paymentStatus === 'pending' ? 'Pending' : 'Completed'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Shipping Information */}
+                        <div style={{ marginTop: '25px' }}>
+                            <h3 style={{
+                                fontSize: '1.1rem',
+                                fontWeight: '600',
+                                color: '#434242',
+                                marginBottom: '15px',
+                                borderBottom: '1px solid #eee',
+                                paddingBottom: '8px'
+                            }}>
+                                Shipping Information
+                            </h3>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                                gap: '15px'
+                            }}>
+                                <div>
+                                    <strong style={{ color: '#57C7C2' }}>Name:</strong>
+                                    <div style={{ color: '#434242' }}>
+                                        {formData.firstName} {formData.lastName}
+                                    </div>
+                                </div>
+                                <div>
+                                    <strong style={{ color: '#57C7C2' }}>Email:</strong>
+                                    <div style={{ color: '#434242' }}>{formData.email}</div>
+                                </div>
+                                <div style={{ gridColumn: isMobile ? '1' : '1 / -1' }}>
+                                    <strong style={{ color: '#57C7C2' }}>Address:</strong>
+                                    <div style={{ color: '#434242' }}>
+                                        {formData.address}, {formData.city}, {formData.state} {formData.zipCode}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: isMobile ? 'column' : 'row',
+                        gap: '15px',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}>
+                        <button
+                            onClick={continueShopping}
+                            style={{
+                                padding: isMobile ? '12px 20px' : '14px 30px',
+                                backgroundColor: '#7DBA00',
+                                border: 'none',
+                                color: '#FFFFFF',
+                                fontSize: isMobile ? '14px' : '16px',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                borderRadius: '8px',
+                                width: isMobile ? '100%' : 'auto',
+                                minWidth: '200px',
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
+                            Continue Shopping
+                        </button>
+                        <button
+                            onClick={() => navigate('/orders')}
+                            style={{
+                                padding: isMobile ? '12px 20px' : '14px 30px',
+                                backgroundColor: 'transparent',
+                                border: '2px solid #57C7C2',
+                                color: '#57C7C2',
+                                fontSize: isMobile ? '14px' : '16px',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                borderRadius: '8px',
+                                width: isMobile ? '100%' : 'auto',
+                                minWidth: '200px',
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
+                            View All Orders
+                        </button>
+                    </div>
+
+                    {/* Additional Info */}
+                    <div style={{
+                        marginTop: '30px',
+                        padding: '15px',
+                        backgroundColor: 'rgba(125, 186, 0, 0.05)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(125, 186, 0, 0.2)'
+                    }}>
+                        <p style={{
+                            fontSize: '14px',
+                            color: '#666',
+                            margin: '0',
+                            textAlign: 'center'
+                        }}>
+                            📧 A confirmation email has been sent to <strong>{formData.email}</strong>
+                        </p>
+                    </div>
                 </div>
             </div>
         );

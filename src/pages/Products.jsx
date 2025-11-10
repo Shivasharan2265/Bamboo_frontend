@@ -6,7 +6,6 @@ import spoon from "../assets/bamboo_spoon.jpeg";
 import HeaderOne from '../layout/Header copy';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import api from '../utils/api';
 
 const Products = () => {
     const navigate = useNavigate();
@@ -84,7 +83,7 @@ const Products = () => {
     const fetchCategories = async () => {
         try {
             setCategoriesLoading(true);
-            const response = await api.get("/category");
+            const response = await axios.get("http://localhost:5055/api/category");
             console.log("✅ Categories API Response:", response.data);
 
             const categoriesData = response.data[0]?.children || [];
@@ -112,7 +111,7 @@ const Products = () => {
                 setFilters(prev => ({ ...prev, category: id }));
             }
 
-            const response = await api.get("/products", {
+            const response = await axios.get("http://localhost:5055/api/products", {
                 params: requestParams,
             });
 
@@ -153,7 +152,7 @@ const Products = () => {
                     category: category._id
                 };
 
-                const response = await api.get("/products", {
+                const response = await axios.get("http://localhost:5055/api/products", {
                     params: requestParams,
                 });
 
@@ -201,7 +200,7 @@ const Products = () => {
 
             // Save directly to localStorage
             saveToLocalStorage(cartItem);
-            alert('Product added to cart successfully!');
+            // alert('Product added to cart successfully!');
 
         } catch (error) {
             console.error("❌ Add to cart error:", error);
@@ -236,11 +235,15 @@ const Products = () => {
             // Update state
             setCartItems(existingCart);
 
+            // ✅ Notify header to refresh cart count
+            window.dispatchEvent(new Event('cartUpdated'));
+
         } catch (error) {
             console.error("❌ Error saving to localStorage:", error);
             throw error;
         }
     };
+
 
     // Remove from Cart Function
     const removeFromCart = (productId, e) => {
@@ -262,7 +265,8 @@ const Products = () => {
             // Update state
             setCartItems(updatedCart);
 
-            alert('Product removed from cart!');
+            // ✅ Notify header
+            window.dispatchEvent(new Event('cartUpdated'));
 
         } catch (error) {
             console.error("❌ Remove from cart error:", error);
@@ -999,7 +1003,7 @@ const Products = () => {
                         }}>
                             {filteredProducts.map((product, index) => (
                                 <div key={product._id}
-                                    // onClick={() => navigate(`/product/${product._id}`)}
+                                    onClick={() => navigate(`/product/${product._id}`)}
                                     style={{
                                         position: 'relative',
                                         cursor: 'pointer',
@@ -1040,6 +1044,7 @@ const Products = () => {
                                     }}>
                                         <img
                                             src={product.image && product.image.length > 0 ? product.image[0] : chair}
+
                                             alt={product.title?.en || 'Product'}
                                             style={{
                                                 width: '100%',

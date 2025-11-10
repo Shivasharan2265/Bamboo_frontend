@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import image from "../assets/generated-image.png"
 import axios from 'axios';
 import Loader from './Loader';
+import API from '../api';
 
 const Home = () => {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -64,7 +65,7 @@ const Home = () => {
 const fetchCategories = async () => {
     try {
         setLoading(true);
-        const response = await axios.get("https://bamboo-backend.onrender.com/category");
+        const response = await API.get("/category");
         if (response.data && response.data[0] && response.data[0].children) {
             setCategories(response.data[0].children);
         } else {
@@ -83,7 +84,7 @@ const fetchProducts = async () => {
         setLoading(true);
         const page = 1;
         const limit = 8;
-         const response = await axios.get("https://bamboo-backend.onrender.com/api/products", {
+         const response = await API.get("/products", {
             params: { page, limit },
         });
         if (response.data && response.data.products) {

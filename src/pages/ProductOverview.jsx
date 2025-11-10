@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import HeaderOne from '../layout/Header copy';
 import chair from "../assets/bamboo_chair.jpg";
 import axios from 'axios';
-import api from '../utils/api';
 
 const ProductOverview = () => {
     const { id } = useParams();
@@ -15,8 +14,9 @@ const ProductOverview = () => {
     const [activeTab, setActiveTab] = useState('description');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-      const [relatedProducts, setRelatedProducts] = useState([]); // Add this state
-    const [loadingRelated, setLoadingRelated] = useState(false); 
+    const [relatedProducts, setRelatedProducts] = useState([]);
+    const [loadingRelated, setLoadingRelated] = useState(false);
+    const [addingToCart, setAddingToCart] = useState(false);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -31,17 +31,27 @@ const ProductOverview = () => {
         };
     }, []);
 
+    const isProductInCart = (productId) => {
+        try {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            return cart.some(item => item.productId === productId);
+        } catch (error) {
+            console.error("Error checking cart:", error);
+            return false;
+        }
+    };
+
     useEffect(() => {
         const fetchProduct = async () => {
             try {
                 setLoading(true);
                 console.log(`🔄 Fetching product with ID: ${id}`);
 
-                const response = await api.post(`/products/${id}`);
+                const response = await axios.post(`http://localhost:5055/api/products/${id}`);
                 console.log("✅ Product API Response:", response.data);
-                
+
                 setProduct(response.data);
-                
+
             } catch (err) {
                 console.error("❌ Product API Error:", err);
                 console.error("❌ Error details:", err.response?.data);
@@ -59,51 +69,50 @@ const ProductOverview = () => {
         }
     }, [id]);
 
-    
-        useEffect(() => {
+    useEffect(() => {
+        if (product) {
             fetchRelatedProducts(product);
-        }, [product]);
+        }
+    }, [product]);
 
-       const fetchRelatedProducts = async (currentProduct) => {
+    const fetchRelatedProducts = async (currentProduct) => {
         try {
             setLoadingRelated(true);
-            
+
             // Get category IDs from the current product
             const categoryIds = [];
-            
+
             // Check if categories array exists and has items
             if (currentProduct.categories && currentProduct.categories.length > 0) {
                 categoryIds.push(...currentProduct.categories.map(cat => cat._id));
             }
-            
+
             // Also check if single category exists
             if (currentProduct.category && currentProduct.category._id) {
                 categoryIds.push(currentProduct.category._id);
             }
-            
+
             console.log("🔍 Fetching related products for categories:", categoryIds);
-            
+
             if (categoryIds.length === 0) {
                 console.log("⚠️ No categories found for related products");
                 setRelatedProducts([]);
                 return;
             }
 
-            // Create a query to find products with matching categories
-            // Exclude the current product
             const requestParams = {
                 page: 1,
-                limit: 8, // Limit to 8 related products
-                categories: categoryIds.join(','), // Send category IDs as comma-separated string
-                exclude: currentProduct._id // Exclude current product
+                limit: 8,
+                categories: categoryIds.join(','),
+                exclude: currentProduct._id
             };
 
-            const response = await api.get("/products", {
+            const response = await axios.get("http://localhost:5055/api/products", {
                 params: requestParams,
             });
 
             console.log("✅ Related Products API Response:", response.data);
-            
+
             if (response.data && response.data.products) {
                 setRelatedProducts(response.data.products);
             } else {
@@ -112,9 +121,73 @@ const ProductOverview = () => {
 
         } catch (error) {
             console.error("❌ Related Products API Error:", error);
-            setRelatedProducts([]); // Set empty array on error
+            setRelatedProducts([]);
         } finally {
             setLoadingRelated(false);
+        }
+    };
+
+    // NEW: Add to Cart Function for ProductOverview - using localStorage
+    const addToCart = (e) => {
+        e.stopPropagation();
+        if (!product) return;
+
+        try {
+            setAddingToCart(true);
+
+            const cartItem = {
+                productId: product._id,
+                title: product.title?.en || 'Product',
+                price: product.prices?.price || product.prices?.originalPrice || 0,
+                image: product.image && product.image.length > 0 ? product.image[0] : chair,
+                quantity: quantity,
+                description: product.description?.en || 'Product description',
+                name: product.title?.en || 'Product',
+                category: product.category || 'general'
+            };
+
+            console.log("🛒 Adding to cart from ProductOverview:", cartItem);
+
+            // Save directly to localStorage (same as Products component)
+            saveToLocalStorage(cartItem);
+            
+        } catch (error) {
+            console.error("❌ Add to cart error:", error);
+            alert('Failed to add product to cart. Please try again.');
+        } finally {
+            setAddingToCart(false);
+        }
+    };
+
+    // NEW: Helper function to save to localStorage
+    const saveToLocalStorage = (cartItem) => {
+        try {
+            // Get existing cart from localStorage
+            const existingCart = JSON.parse(localStorage.getItem('cart')) || [];
+
+            // Check if product already exists in cart
+            const existingItemIndex = existingCart.findIndex(item => item.productId === cartItem.productId);
+
+            if (existingItemIndex > -1) {
+                // Update quantity if item exists
+                existingCart[existingItemIndex].quantity += cartItem.quantity;
+            } else {
+                // Add new item to cart
+                existingCart.push(cartItem);
+            }
+
+            // Save updated cart back to localStorage
+            localStorage.setItem('cart', JSON.stringify(existingCart));
+            console.log("💾 Saved to localStorage from ProductOverview:", existingCart);
+
+            // ✅ Notify header to refresh cart count
+            window.dispatchEvent(new Event('cartUpdated'));
+
+            alert('Product added to cart successfully!');
+
+        } catch (error) {
+            console.error("❌ Error saving to localStorage:", error);
+            throw error;
         }
     };
 
@@ -135,7 +208,7 @@ const ProductOverview = () => {
         } else if (product.image) {
             return product.image;
         }
-        return chair; // fallback image
+        return chair;
     };
 
     // Navigate to related product
@@ -162,7 +235,7 @@ const ProductOverview = () => {
 
     const getProductImages = () => {
         if (!product) return [chair];
-        
+
         if (Array.isArray(product.image) && product.image.length > 0) {
             return product.image;
         } else if (product.image) {
@@ -177,12 +250,10 @@ const ProductOverview = () => {
 
     const getProductFeatures = () => {
         const features = [];
-        
-        // Handle tags - they're stored as JSON strings in an array
+
         if (product?.tag && Array.isArray(product.tag)) {
             product.tag.forEach(tagString => {
                 try {
-                    // Parse the JSON string to get the actual tags
                     const parsedTags = JSON.parse(tagString);
                     if (Array.isArray(parsedTags)) {
                         features.push(...parsedTags);
@@ -191,29 +262,26 @@ const ProductOverview = () => {
                     }
                 } catch (error) {
                     console.log('Error parsing tag:', tagString);
-                    // If parsing fails, try to extract tags manually
                     const cleanedTags = tagString.replace(/[\[\]"]/g, '').split(',');
                     features.push(...cleanedTags.filter(tag => tag.trim() !== ''));
                 }
             });
         }
-        
-        // Add additional product information as features
+
         if (product?.stock > 0) {
             features.push(`In stock (${product.stock} available)`);
         } else if (product?.stock === 0) {
             features.push('Out of stock');
         }
-        
+
         if (product?.category?.name) {
             features.push(`${product.category.name.en || product.category.name} collection`);
         }
-        
+
         if (product?.prices?.discount && product.prices.discount > 0) {
             features.push(`Save $${product.prices.discount}`);
         }
-        
-        // Remove any empty features and limit to 5
+
         return features.filter(feature => feature && feature.trim() !== '').slice(0, 5);
     };
 
@@ -226,8 +294,7 @@ const ProductOverview = () => {
             'Status': product?.status || 'N/A',
             'Product ID': product?.productId || 'N/A'
         };
-        
-        // Remove entries with 'N/A'
+
         return Object.fromEntries(
             Object.entries(specs).filter(([_, value]) => value !== 'N/A')
         );
@@ -237,67 +304,6 @@ const ProductOverview = () => {
         if (!price) return '$0';
         return `$${parseFloat(price).toFixed(2)}`;
     };
-
-    // Add to Cart Function (keep your existing addToCart function)
-    const addToCart = async (e) => {
-        e.stopPropagation();
-        if (!product) return;
-
-        try {
-            const cartItem = {
-                productId: product._id,
-                title: product.title?.en || 'Product',
-                price: product.prices?.price || product.prices?.originalPrice || 0,
-                image: product.image && product.image.length > 0 ? product.image[0] : chair,
-                quantity: quantity,
-                description: product.description?.en || 'Product description',
-                paymentMethod: 'cash',
-                subTotal: (product.prices?.price || product.prices?.originalPrice || 0) * quantity,
-                total: (product.prices?.price || product.prices?.originalPrice || 0) * quantity,
-                shippingCost: 0,
-                status: 'Pending',
-                cart: [
-                    {
-                        product: product._id,
-                        quantity: quantity,
-                        price: product.prices?.price || product.prices?.originalPrice || 0
-                    }
-                ]
-            };
-
-            console.log("🛒 Adding to cart:", cartItem);
-
-            const token = localStorage.getItem('authToken');
-            if (!token) {
-                alert('Please login to add items to cart');
-                navigate('/login');
-                return;
-            }
-
-            const response = await api.post('/order/add', cartItem, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            console.log("✅ Add to cart response:", response.data);
-            alert('Product added to cart successfully!');
-
-        } catch (error) {
-            console.error("❌ Add to cart error:", error);
-            if (error.response?.status === 401) {
-                alert('Your session has expired. Please login again.');
-                localStorage.removeItem('authToken');
-                navigate('/login');
-            } else {
-                alert('Failed to add product to cart. Please try again.');
-            }
-        }
-    };
-
-    // Rest of your component remains the same...
-    // (loading states, error handling, and JSX rendering)
 
     if (loading) {
         return (
@@ -322,7 +328,6 @@ const ProductOverview = () => {
             </div>
         );
     }
-
 
     if (error || !product) {
         return (
@@ -375,232 +380,141 @@ const ProductOverview = () => {
         );
     }
 
-const renderRelatedProducts = () => {
-    if (loadingRelated) {
+    const renderRelatedProducts = () => {
+        if (loadingRelated) {
+            return (
+                <div style={{
+                    textAlign: 'center',
+                    padding: '40px 0',
+                    color: '#E39963'
+                }}>
+                    <h3 style={{
+                        fontSize: isMobile ? '1.3rem' : '1.5rem',
+                        fontWeight: '300',
+                        marginBottom: '20px'
+                    }}>
+                        Loading related products...
+                    </h3>
+                </div>
+            );
+        }
+
+        if (relatedProducts.length === 0) {
+            return null;
+        }
+
         return (
             <div style={{
-                textAlign: 'center',
-                padding: '40px 0',
-                color: '#E39963'
-            }}>
-                <h3 style={{
-                    fontSize: isMobile ? '1.3rem' : '1.5rem',
-                    fontWeight: '300',
-                    marginBottom: '20px'
-                }}>
-                    Loading related products...
-                </h3>
-            </div>
-        );
-    }
-
-    if (relatedProducts.length === 0) {
-        return null; // Don't show section if no related products
-    }
-
-    return (
-        <div  style={{
                 maxWidth: '1400px',
                 margin: '0 auto',
                 padding: isMobile ? '15px 15px 10px' : '30px 50px 20px',
             }}>
-            <h2 style={{
-                fontSize: isMobile ? '1.5rem' : '2rem',
-                fontWeight: '300',
-                color: '#434242',
-                marginBottom: isMobile ? '20px' : '30px',
-                textAlign: 'center'
-            }}>
-                You Might Also Like
-            </h2>
+                <h2 style={{
+                    fontSize: isMobile ? '1.5rem' : '2rem',
+                    fontWeight: '300',
+                    color: '#434242',
+                    marginBottom: isMobile ? '20px' : '30px',
+                    textAlign: 'center'
+                }}>
+                    You Might Also Like
+                </h2>
 
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: isMobile ? '25px' : '40px',
-                padding: isMobile ? '10px 0' : '0'
-            }}>
-                {relatedProducts.map((relatedProduct) => (
-                    <div
-                        key={relatedProduct._id}
-                        onClick={() => navigateToProduct(relatedProduct._id)}
-                        style={{
-                            position: 'relative',
-                            cursor: 'pointer',
-                            border: isMobile ? '1px solid #F2EDE8' : 'none',
-                            borderRadius: isMobile ? '10px' : '0',
-                            padding: isMobile ? '15px' : '0',
-                            backgroundColor: isMobile ? '#FFFFFF' : 'transparent',
-                            boxShadow: isMobile ? '0 2px 10px rgba(0,0,0,0.05)' : 'none',
-                            transition: 'all 0.3s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!isMobile) {
-                                const img = e.currentTarget.querySelector('img');
-                                const overlay = e.currentTarget.querySelector('.product-overlay');
-                                if (img) img.style.transform = 'scale(1.05)';
-                                if (overlay) overlay.style.opacity = '1';
-                                e.currentTarget.style.transform = 'translateY(-5px)';
-                                e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.1)';
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (!isMobile) {
-                                const img = e.currentTarget.querySelector('img');
-                                const overlay = e.currentTarget.querySelector('.product-overlay');
-                                if (img) img.style.transform = 'scale(1)';
-                                if (overlay) overlay.style.opacity = '0';
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'none';
-                            }
-                        }}
-                    >
-                        {/* Product Image */}
-                        <div style={{
-                            position: 'relative',
-                            height: isMobile ? '250px' : '350px',
-                            overflow: 'hidden',
-                            marginBottom: isMobile ? '15px' : '20px',
-                            borderRadius: isMobile ? '8px' : '0'
-                        }}>
-                            <img
-                                src={getRelatedProductImage(relatedProduct)}
-                                alt={getRelatedProductName(relatedProduct)}
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                    transition: isMobile ? 'none' : 'transform 0.4s ease'
-                                }}
-                            />
-                            {/* Hover Overlay */}
-                            {!isMobile && (
-                                <div className="product-overlay" style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    backgroundColor: 'rgba(0,0,0,0.05)',
-                                    opacity: 0,
-                                    transition: 'opacity 0.3s ease'
-                                }}></div>
-                            )}
-
-                            {/* Featured Badge */}
-                            {relatedProduct.featured && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: isMobile ? '10px' : '15px',
-                                    right: isMobile ? '10px' : '15px',
-                                    backgroundColor: '#E39963',
-                                    color: '#FFFFFF',
-                                    padding: isMobile ? '4px 8px' : '5px 10px',
-                                    fontSize: isMobile ? '10px' : '12px',
-                                    fontWeight: '400',
-                                    letterSpacing: '0.5px',
-                                    borderRadius: '3px'
-                                }}>
-                                    Featured
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Product Info */}
-                        <div style={{
-                            textAlign: isMobile ? 'left' : 'center',
-                            padding: isMobile ? '0' : '0 10px'
-                        }}>
-                            <h3 style={{
-                                fontSize: isMobile ? '1rem' : '1.1rem',
-                                fontWeight: '400',
-                                color: '#434242',
-                                margin: '0 0 8px 0',
-                                letterSpacing: '0.5px',
-                                lineHeight: '1.4'
-                            }}>
-                                {getRelatedProductName(relatedProduct)}
-                            </h3>
-                            <p style={{
-                                fontSize: isMobile ? '0.85rem' : '0.9rem',
-                                color: '#434242',
-                                margin: '0 0 12px 0',
-                                opacity: 0.7,
-                                lineHeight: '1.4',
-                                minHeight: isMobile ? 'auto' : '40px',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden'
-                            }}>
-                                {relatedProduct.description?.en || 'Product description'}
-                            </p>
-                            <div style={{display:"flex", alignItems:"center", justifyContent:"center"}}>
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: isMobile ? '25px' : '40px',
+                    padding: isMobile ? '10px 0' : '0'
+                }}>
+                    {relatedProducts.map((relatedProduct) => (
+                        <div
+                            key={relatedProduct._id}
+                            onClick={() => navigateToProduct(relatedProduct._id)}
+                            style={{
+                                position: 'relative',
+                                cursor: 'pointer',
+                                border: isMobile ? '1px solid #F2EDE8' : 'none',
+                                borderRadius: isMobile ? '10px' : '0',
+                                padding: isMobile ? '15px' : '0',
+                                backgroundColor: isMobile ? '#FFFFFF' : 'transparent',
+                                boxShadow: isMobile ? '0 2px 10px rgba(0,0,0,0.05)' : 'none',
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
+                            {/* Product Image */}
                             <div style={{
-                                fontSize: isMobile ? '1rem' : '1rem',
-                                fontWeight: '400',
-                                color: '#E39963',
-                                letterSpacing: '0.5px',
-                                marginBottom: isMobile ? '12px' : '15px'
+                                position: 'relative',
+                                height: isMobile ? '250px' : '350px',
+                                overflow: 'hidden',
+                                marginBottom: isMobile ? '15px' : '20px',
+                                borderRadius: isMobile ? '8px' : '0'
                             }}>
-                                {formatPrice(getRelatedProductPrice(relatedProduct))}
+                                <img
+                                    src={getRelatedProductImage(relatedProduct)}
+                                    alt={getRelatedProductName(relatedProduct)}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        transition: isMobile ? 'none' : 'transform 0.4s ease'
+                                    }}
+                                />
                             </div>
-                            {relatedProduct.prices?.originalPrice && 
-                             relatedProduct.prices.originalPrice !== getRelatedProductPrice(relatedProduct) && (
-                                <div style={{
-                                    fontSize: isMobile ? '12px' : '14px',
-                                    color: '#434242',
-                                    textDecoration: 'line-through',
-                                    opacity: 0.6,
-                                    marginBottom: '15px',
-                                    marginLeft: '10px'
-                                }}>
-                                    {formatPrice(relatedProduct.prices.originalPrice)}
-                                </div>
-                            )}
-                            </div>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    // You can add addToCart functionality here if needed
-                                    navigateToProduct(relatedProduct._id);
-                                }}
-                                style={{
-                                    padding: isMobile ? '12px 20px' : '12px 30px',
-                                    backgroundColor: 'transparent',
-                                    border: '1px solid #434242',
-                                    color: '#434242',
-                                    fontSize: isMobile ? '11px' : '12px',
+
+                            {/* Product Info */}
+                            <div style={{
+                                textAlign: isMobile ? 'left' : 'center',
+                                padding: isMobile ? '0' : '0 10px'
+                            }}>
+                                <h3 style={{
+                                    fontSize: isMobile ? '1rem' : '1.1rem',
                                     fontWeight: '400',
-                                    letterSpacing: '1px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s ease',
-                                    textTransform: 'uppercase',
-                                    width: isMobile ? '100%' : '100%',
-                                    borderRadius: isMobile ? '5px' : '0'
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!isMobile) {
-                                        e.target.style.backgroundColor = '#434242';
-                                        e.target.style.color = '#FFFFFF';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!isMobile) {
-                                        e.target.style.backgroundColor = 'transparent';
-                                        e.target.style.color = '#434242';
-                                    }
-                                }}
-                            >
-                                View Product
-                            </button>
+                                    color: '#434242',
+                                    margin: '0 0 8px 0',
+                                    letterSpacing: '0.5px',
+                                    lineHeight: '1.4'
+                                }}>
+                                    {getRelatedProductName(relatedProduct)}
+                                </h3>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <div style={{
+                                        fontSize: isMobile ? '1rem' : '1rem',
+                                        fontWeight: '400',
+                                        color: '#E39963',
+                                        letterSpacing: '0.5px',
+                                        marginBottom: isMobile ? '12px' : '15px'
+                                    }}>
+                                        {formatPrice(getRelatedProductPrice(relatedProduct))}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigateToProduct(relatedProduct._id);
+                                    }}
+                                    style={{
+                                        padding: isMobile ? '12px 20px' : '12px 30px',
+                                        backgroundColor: 'transparent',
+                                        border: '1px solid #434242',
+                                        color: '#434242',
+                                        fontSize: isMobile ? '11px' : '12px',
+                                        fontWeight: '400',
+                                        letterSpacing: '1px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s ease',
+                                        textTransform: 'uppercase',
+                                        width: isMobile ? '100%' : '100%',
+                                        borderRadius: isMobile ? '5px' : '0'
+                                    }}
+                                >
+                                    View Product
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
-        </div>
-    );
-};
+        );
+    };
 
     const productImages = getProductImages();
     const productFeatures = getProductFeatures();
@@ -640,12 +554,6 @@ const renderRelatedProducts = () => {
                     <span
                         style={{ cursor: 'pointer', color: '#57C7C2' }}
                         onClick={() => navigate('/products')}
-                        onMouseEnter={(e) => {
-                            e.target.style.color = '#7DBA00';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.color = '#57C7C2';
-                        }}
                     >
                         Products
                     </span>
@@ -653,12 +561,6 @@ const renderRelatedProducts = () => {
                     <span
                         style={{ cursor: 'pointer', color: '#57C7C2' }}
                         onClick={() => navigate(`/products?category=${productCategory}`)}
-                        onMouseEnter={(e) => {
-                            e.target.style.color = '#7DBA00';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.color = '#57C7C2';
-                        }}
                     >
                         {productCategory.charAt(0).toUpperCase() + productCategory.slice(1)}
                     </span>
@@ -707,22 +609,6 @@ const renderRelatedProducts = () => {
                                     transition: 'transform 0.3s ease'
                                 }}
                             />
-                            {product.status === 'show' && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: isMobile ? '12px' : '20px',
-                                    right: isMobile ? '12px' : '20px',
-                                    backgroundColor: '#7DBA00',
-                                    color: '#FFFFFF',
-                                    padding: isMobile ? '6px 12px' : '8px 16px',
-                                    fontSize: isMobile ? '10px' : '12px',
-                                    fontWeight: '500',
-                                    letterSpacing: '0.5px',
-                                    borderRadius: '20px'
-                                }}>
-                                    Available
-                                </div>
-                            )}
                         </div>
 
                         {/* Thumbnail Images */}
@@ -732,7 +618,6 @@ const renderRelatedProducts = () => {
                                 gap: isMobile ? '10px' : '15px',
                                 overflowX: 'auto',
                                 paddingBottom: '10px',
-                                WebkitOverflowScrolling: 'touch'
                             }}>
                                 {productImages.map((image, index) => (
                                     <div
@@ -745,7 +630,6 @@ const renderRelatedProducts = () => {
                                             overflow: 'hidden',
                                             cursor: 'pointer',
                                             border: selectedImage === index ? '2px solid #7DBA00' : '1px solid rgba(87, 199, 194, 0.2)',
-                                            transition: 'all 0.3s ease'
                                         }}
                                         onClick={() => setSelectedImage(index)}
                                     >
@@ -774,7 +658,6 @@ const renderRelatedProducts = () => {
                             color: '#434242',
                             marginBottom: isMobile ? '12px' : '15px',
                             lineHeight: '1.2',
-                            padding: isMobile ? '0 5px' : '0'
                         }}>
                             {productName}
                         </h1>
@@ -784,7 +667,6 @@ const renderRelatedProducts = () => {
                             alignItems: 'center',
                             gap: isMobile ? '12px' : '15px',
                             marginBottom: isMobile ? '20px' : '25px',
-                            padding: isMobile ? '0 5px' : '0'
                         }}>
                             <div style={{
                                 fontSize: isMobile ? '1.5rem' : '1.8rem',
@@ -810,7 +692,6 @@ const renderRelatedProducts = () => {
                             lineHeight: '1.6',
                             color: '#666',
                             marginBottom: isMobile ? '25px' : '30px',
-                            padding: isMobile ? '0 5px' : '0'
                         }}>
                             {productDescription}
                         </p>
@@ -819,7 +700,6 @@ const renderRelatedProducts = () => {
                         {productFeatures.length > 0 && (
                             <div style={{
                                 marginBottom: isMobile ? '25px' : '30px',
-                                padding: isMobile ? '0 5px' : '0'
                             }}>
                                 <h3 style={{
                                     fontSize: isMobile ? '1rem' : '1.1rem',
@@ -864,7 +744,6 @@ const renderRelatedProducts = () => {
                             gap: isMobile ? '12px' : '15px',
                             marginBottom: isMobile ? '25px' : '30px',
                             flexWrap: 'wrap',
-                            padding: isMobile ? '0 5px' : '0'
                         }}>
                             <div style={{
                                 display: 'flex',
@@ -884,15 +763,6 @@ const renderRelatedProducts = () => {
                                         fontSize: isMobile ? '18px' : '16px',
                                         color: '#57C7C2',
                                         minWidth: isMobile ? '44px' : 'auto',
-                                        transition: 'all 0.3s ease'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.target.style.backgroundColor = '#57C7C2';
-                                        e.target.style.color = '#FFFFFF';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.target.style.backgroundColor = '#F8F8F8';
-                                        e.target.style.color = '#57C7C2';
                                     }}
                                 >
                                     -
@@ -917,58 +787,56 @@ const renderRelatedProducts = () => {
                                         fontSize: isMobile ? '18px' : '16px',
                                         color: '#57C7C2',
                                         minWidth: isMobile ? '44px' : 'auto',
-                                        transition: 'all 0.3s ease'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.target.style.backgroundColor = '#57C7C2';
-                                        e.target.style.color = '#FFFFFF';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.target.style.backgroundColor = '#F8F8F8';
-                                        e.target.style.color = '#57C7C2';
                                     }}
                                 >
                                     +
                                 </button>
                             </div>
 
-                            <button 
+                            <button
                                 style={{
                                     flex: '1',
                                     padding: isMobile ? '16px 20px' : '15px 30px',
-                                    backgroundColor: '#7DBA00',
+                                    backgroundColor: isProductInCart(product._id) ? '#E39963' : '#7DBA00',
                                     border: 'none',
                                     color: '#FFFFFF',
                                     fontSize: isMobile ? '15px' : '16px',
                                     fontWeight: '500',
-                                    cursor: 'pointer',
+                                    cursor: addingToCart ? 'not-allowed' : 'pointer',
                                     transition: 'all 0.3s ease',
                                     textTransform: 'uppercase',
                                     letterSpacing: '1px',
                                     borderRadius: '5px',
-                                    minWidth: isMobile ? '200px' : '200px'
+                                    minWidth: isMobile ? '200px' : '200px',
+                                    opacity: addingToCart ? 0.7 : 1
                                 }}
-                                onMouseEnter={(e) => {
-                                    if (!isMobile) {
-                                        e.target.style.backgroundColor = '#57C7C2';
-                                        e.target.style.transform = 'translateY(-2px)';
+                                onClick={(e) => {
+                                    if (isProductInCart(product._id)) {
+                                        e.stopPropagation();
+                                        navigate('/cart');
+                                    } else {
+                                        addToCart(e);
                                     }
                                 }}
-                                onMouseLeave={(e) => {
-                                    if (!isMobile) {
-                                        e.target.style.backgroundColor = '#7DBA00';
-                                        e.target.style.transform = 'translateY(0)';
-                                    }
-                                }}
-                                onTouchStart={(e) => {
-                                    e.target.style.backgroundColor = '#57C7C2';
-                                }}
-                                onTouchEnd={(e) => {
-                                    e.target.style.backgroundColor = '#7DBA00';
-                                }}
-                                onClick={addToCart}
+                                disabled={addingToCart}
                             >
-                                Add to Cart - {formatPrice(productPrice * quantity)}
+                                {addingToCart ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        <div style={{
+                                            width: '14px',
+                                            height: '14px',
+                                            border: '2px solid transparent',
+                                            borderTop: '2px solid currentColor',
+                                            borderRadius: '50%',
+                                            animation: 'spin 1s linear infinite'
+                                        }}></div>
+                                        Adding...
+                                    </div>
+                                ) : isProductInCart(product._id) ? (
+                                    `Go to Cart - ${formatPrice(productPrice * quantity)}`
+                                ) : (
+                                    `Add to Cart - ${formatPrice(productPrice * quantity)}`
+                                )}
                             </button>
                         </div>
 
@@ -1012,7 +880,6 @@ const renderRelatedProducts = () => {
                         borderBottom: '1px solid rgba(87, 199, 194, 0.2)',
                         marginBottom: isMobile ? '20px' : '30px',
                         overflowX: 'auto',
-                        WebkitOverflowScrolling: 'touch'
                     }}>
                         {['description', 'specifications'].map((tab) => (
                             <button
@@ -1050,40 +917,6 @@ const renderRelatedProducts = () => {
                                 }}>
                                     {productDescription}
                                 </p>
-                                {productFeatures.length > 0 && (
-                                    <div style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-                                        gap: isMobile ? '12px' : '20px',
-                                        marginTop: isMobile ? '20px' : '30px'
-                                    }}>
-                                        {productFeatures.map((feature, index) => (
-                                            <div key={index} style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: isMobile ? '12px' : '15px',
-                                                padding: isMobile ? '12px' : '15px',
-                                                backgroundColor: '#F8F8F8',
-                                                borderRadius: '8px',
-                                                borderLeft: `4px solid ${index % 3 === 0 ? '#E37DCC' : index % 3 === 1 ? '#7DBA00' : '#57C7C2'}`
-                                            }}>
-                                                <div style={{
-                                                    width: isMobile ? '6px' : '8px',
-                                                    height: isMobile ? '6px' : '8px',
-                                                    backgroundColor: index % 3 === 0 ? '#E37DCC' : index % 3 === 1 ? '#7DBA00' : '#57C7C2',
-                                                    borderRadius: '50%',
-                                                    flexShrink: 0
-                                                }}></div>
-                                                <span style={{
-                                                    fontSize: isMobile ? '13px' : '14px',
-                                                    color: '#434242'
-                                                }}>
-                                                    {feature}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
                         )}
 
@@ -1121,7 +954,17 @@ const renderRelatedProducts = () => {
                     </div>
                 </div>
             </div>
-              {renderRelatedProducts()}
+            {renderRelatedProducts()}
+
+            {/* Add CSS for spinner animation */}
+            <style>
+                {`
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `}
+            </style>
         </div>
     );
 };

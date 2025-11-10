@@ -80,7 +80,7 @@ const Categories = () => {
     const fetchCategories = async () => {
         try {
             setLoading(true);
-            const response = await axios.get("https://bamboo-backend.onrender.com/category");
+            const response = await axios.get("http://localhost:5055/api/category");
             console.log("✅ Categories API Response:", response.data);
 
             // Extract categories from the children array
